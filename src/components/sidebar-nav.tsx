@@ -4,11 +4,16 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, ShieldCheck, type LucideIcon } from "lucide-react";
+import { MODULES } from "@/lib/modules";
 
 type NavGroup = { title: string; links: { href: string; label: string; icon: LucideIcon }[] };
 
 const GROUPS: NavGroup[] = [
   { title: "Munka", links: [{ href: "/", label: "Áttekintés", icon: LayoutDashboard }] },
+  {
+    title: "Munkaterületek",
+    links: MODULES.map(({ slug, label, icon }) => ({ href: `/${slug}`, label, icon })),
+  },
   { title: "Fiók", links: [{ href: "/biztonsag", label: "Biztonság", icon: ShieldCheck }] },
 ];
 

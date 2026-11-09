@@ -4,21 +4,18 @@ import { Suspense } from "react";
 import {
   CircleAlert,
   CircleCheck,
-  ClipboardCheck,
-  FileSearch,
-  FileText,
   KeyRound,
   LogIn,
   MonitorSmartphone,
   PartyPopper,
   ShieldCheck,
   Siren,
-  Target,
   type LucideIcon,
 } from "lucide-react";
 import { PageTitle } from "@/components/page-title";
 import { Panel, Pill, type Tone } from "@/components/ui";
 import { formatShortDay, formatStamp, greeting } from "@/lib/dates";
+import { MODULES } from "@/lib/modules";
 import { loadActivity } from "@/lib/overview";
 import { countActiveSessions, requireUser } from "@/lib/session";
 
@@ -80,13 +77,6 @@ function controls(mfaActive: boolean): Control[] {
     },
   ];
 }
-
-const MODULES: { icon: LucideIcon; title: string; text: string }[] = [
-  { icon: ClipboardCheck, title: "Ellenőrzési terv", text: "Éves és eseti vizsgálatok ütemezése, felelősök." },
-  { icon: FileSearch, title: "Megállapítások", text: "Hiányosságok rögzítése súlyosság és bizonyíték szerint." },
-  { icon: Target, title: "Intézkedési terv", text: "Határidők, felelősök és a javítás visszaellenőrzése." },
-  { icon: FileText, title: "Jelentések", text: "Nyomtatható auditjelentések és vezetői összefoglaló." },
-];
 
 export default function OverviewPage({ searchParams }: PageProps<"/">) {
   return (
@@ -280,23 +270,27 @@ async function Overview({ searchParams }: Pick<PageProps<"/">, "searchParams">) 
 
       <section>
         <div className="mb-4 flex items-center gap-3">
-          <h2 className="font-display text-lg font-semibold">Hamarosan</h2>
+          <h2 className="font-display text-lg font-semibold">Munkaterületek</h2>
           <Pill tone="muted">Fejlesztés alatt</Pill>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {MODULES.map(({ icon: Icon, title, text }) => (
-            <div key={title} className="rounded-2xl border border-dashed border-white/12 p-5">
-              <span className="grid size-10 place-items-center rounded-xl bg-violet/15 text-violet-bright">
-                <Icon size={19} aria-hidden />
-              </span>
+          {MODULES.map(({ slug, number, icon: Icon, title, summary }) => (
+            <Link
+              key={slug}
+              href={`/${slug}`}
+              className="pg-card group rounded-2xl p-5 hover:bg-white/5"
+            >
+              <div className="flex items-center justify-between">
+                <span className="grid size-10 place-items-center rounded-xl bg-violet/15 text-violet-bright transition-colors group-hover:bg-mint/15 group-hover:text-mint">
+                  <Icon size={19} aria-hidden />
+                </span>
+                <span className="font-display text-xs text-white/30">{number}</span>
+              </div>
               <p className="mt-4 font-semibold">{title}</p>
-              <p className="mt-1 text-sm text-white/50">{text}</p>
-            </div>
+              <p className="mt-1 line-clamp-3 text-sm text-white/50">{summary}</p>
+            </Link>
           ))}
         </div>
-        <p className="mt-4 text-sm text-white/45">
-          A fiókod és a naplód a <Link href="/biztonsag" className="text-mint underline underline-offset-4">Biztonság</Link> oldalon érhető el.
-        </p>
       </section>
     </div>
   );
