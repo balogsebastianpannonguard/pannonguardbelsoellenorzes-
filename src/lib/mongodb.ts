@@ -23,6 +23,16 @@ async function connect(uri: string) {
     db.collection("login_throttle").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     db.collection("audit_log").createIndex({ userId: 1, at: -1 }),
     db.collection("users").createIndex({ email: 1 }, { unique: true }),
+    db.collection("tenders").createIndex({ deadline: 1 }),
+    db.collection("datasets").createIndex({ createdAt: -1 }),
+    db.collection("translations").createIndex({ createdAt: -1 }),
+    db.collection("audits").createIndex({ createdAt: -1 }),
+    db.collection("audit_files").createIndex({ auditId: 1, uploadedAt: -1 }),
+    db.collection("findings").createIndex({ status: 1, createdAt: -1 }),
+    db.collection("findings").createIndex({ auditId: 1 }),
+    db.collection("recommendations").createIndex({ findingId: 1 }),
+    db.collection("recommendations").createIndex({ createdAt: -1 }),
+    db.collection("legal_laws").createIndex({ createdAt: 1 }),
   ]);
   return client;
 }

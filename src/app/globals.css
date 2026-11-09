@@ -219,3 +219,30 @@ body {
     transition: none;
   }
 }
+
+/* Nyomtatás: csak a dokumentum („papír”) jelenik meg, A4-en. */
+@page {
+  size: A4;
+  margin: 14mm 16mm;
+}
+
+@media print {
+  body {
+    background: #fff !important;
+    color: #000;
+  }
+
+  aside,
+  header,
+  nav,
+  .print-hidden,
+  .pg-orb,
+  .pg-grid {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+}
