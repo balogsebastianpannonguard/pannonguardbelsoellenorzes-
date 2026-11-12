@@ -5,11 +5,13 @@ import { LoaderCircle, Plus } from "lucide-react";
 import { Feedback, Input, Label, Textarea, buttonClass } from "@/components/ui";
 import { createAudit } from "@/lib/actions/audits";
 import type { FormState } from "@/lib/form";
+import { useKeepForm } from "@/components/use-keep-form";
 
 export function AuditForm() {
   const [state, action, pending] = useActionState<FormState, FormData>(createAudit, {});
+  const { ref: keepRef, onSubmit: keepSubmit } = useKeepForm(action, state, { resetOnOk: true });
   return (
-    <form action={action} className="space-y-4">
+    <form ref={keepRef} onSubmit={keepSubmit} className="space-y-4">
       <Label label="Az ellenőrzés neve">
         <Input name="name" required minLength={3} maxLength={140} placeholder="Pl. 2026. évi beszerzési ellenőrzés" />
       </Label>

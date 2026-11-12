@@ -12,46 +12,47 @@ export const BASE_LAWS = [
     name: "Munka Törvénykönyve",
     cite: "2012. évi I. törvény",
     why: "Munkaidő, pihenőidő, rendkívüli munka, szabadság – a munkaügyi ellenőrzések alapja.",
-    url: "https://njt.hu/jogszabaly/2012-1-00-00",
+    url: "https://njt.jog.gov.hu/jogszabaly/2012-1-00-00",
   },
   {
     id: "szvtv",
     name: "Személy- és vagyonvédelmi tv.",
     cite: "2005. évi CXXXIII. törvény",
     why: "A vagyonőri tevékenység engedélyei, a szolgálati igazolvány és az intézkedési jogkör szabályai.",
-    url: "https://njt.hu/jogszabaly/2005-133-00-00",
+    url: "https://njt.jog.gov.hu/jogszabaly/2005-133-00-00",
   },
   {
     id: "infotv",
     name: "Információs önrendelkezési jog tv.",
     cite: "2011. évi CXII. törvény",
     why: "Személyes adatok kezelése: munkavállalói törzsadatok, nyilvántartások, kamerás megfigyelés.",
-    url: "https://njt.hu/jogszabaly/2011-112-00-00",
+    url: "https://njt.jog.gov.hu/jogszabaly/2011-112-00-00",
   },
   {
     id: "kibertv",
     name: "Magyarország kiberbiztonságáról",
     cite: "2024. évi LXIX. törvény",
     why: "A NIS2-irányelv hazai átültetése: a szervezet kiberbiztonsági kötelezettségei és ellenőrzése.",
-    url: "https://njt.hu/jogszabaly/2024-69-00-00",
+    url: "https://njt.jog.gov.hu/jogszabaly/2024-69-00-00",
   },
   {
     id: "kbt",
     name: "Közbeszerzési törvény",
     cite: "2015. évi CXLIII. törvény",
     why: "Közbeszerzési eljárások és pályázati anyagok szabályossága, dokumentációs követelmények.",
-    url: "https://njt.hu/jogszabaly/2015-143-00-00",
+    url: "https://njt.jog.gov.hu/jogszabaly/2015-143-00-00",
   },
   {
     id: "szamvitel",
     name: "Számviteli törvény",
     cite: "2000. évi C. törvény",
     why: "Könyvvezetés, beszámoló és bizonylati rend – a pénzügyi ellenőrzések alapja.",
-    url: "https://njt.hu/jogszabaly/2000-100-00-00",
+    url: "https://njt.jog.gov.hu/jogszabaly/2000-100-00-00",
   },
 ] as const;
 
-const ALLOWED_HOSTS = new Set(["njt.hu", "www.njt.hu"]);
+// A Nemzeti Jogszabálytár az njt.hu-ról az njt.jog.gov.hu-ra irányít át; mindkettő elfogadott.
+const ALLOWED_HOSTS = new Set(["njt.hu", "www.njt.hu", "njt.jog.gov.hu"]);
 
 /** Csak a Nemzeti Jogszabálytár https-címe fogadható el (a szerver innen tölt le). */
 export function validLawUrl(value: string) {
@@ -286,9 +287,14 @@ export async function listLaws(): Promise<LawRow[]> {
 export async function saveMeta(id: string, note: string, effectiveDate: string) {
   await (await watch()).updateOne(
     { _id: id },
-    { $set: { note, effectiveDate }, $setOnInsert: { state: "same" } },
+    { $set: { note, effectiveDate } },
     { upsert: true },
   );
+}
+
+/** A változás átnézve: a jogszabály újra „nincs változás” állapotú (az előzmények megmaradnak). */
+export async function acknowledgeChange(id: string) {
+  await (await watch()).updateOne({ _id: id, state: "changed" }, { $set: { state: "same" } });
 }
 
 export async function lawExists(id: string) {

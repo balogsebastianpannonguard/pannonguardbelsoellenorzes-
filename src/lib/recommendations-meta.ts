@@ -6,8 +6,8 @@ export const REC_STATUSES = { tervezet: "Tervezet", jovahagyva: "Jóváhagyva", 
 export type RecStatus = keyof typeof REC_STATUSES;
 export const REC_TONE = { tervezet: "info", jovahagyva: "ok", elutasitva: "muted" } as const;
 
-export const isPriority = (value: string): value is Priority => value in PRIORITIES;
-export const isRecStatus = (value: string): value is RecStatus => value in REC_STATUSES;
+export const isPriority = (value: string): value is Priority => Object.hasOwn(PRIORITIES, value);
+export const isRecStatus = (value: string): value is RecStatus => Object.hasOwn(REC_STATUSES, value);
 
 export type RecommendationRow = {
   id: string;

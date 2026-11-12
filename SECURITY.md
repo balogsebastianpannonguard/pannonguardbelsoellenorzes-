@@ -25,8 +25,23 @@ Annex A és az NIS2-irányelv 21. cikk (2) bekezdéséhez igazodnak (a megfelelt
 - **Naplózás (`audit_log`):** regisztráció, belépés, hibás jelszó/kód, zárolás,
   kijelentkezés, IP és eszköz. *(ISO A.8.15)*
 
+## Pajzs (lebegő asszisztens) és adatkezelés
+
+- **AI (Google Gemini):** a csevegéshez csak darabszámok, súlyossági bontás és a pályázatok nevei kerülnek a
+  modellhez; a megállapítások szövege, felelősök neve és személyes adat nem. A beírt kérdés és a digitalizált iratok
+  tartalma viszont a szolgáltatóhoz kerül: személyes adatot tartalmazó irathoz fizetős (számlázott), Google Cloudban
+  korlátozott kulcs kell, és az AI-szolgáltatót fel kell tüntetni az adatkezelési tájékoztatóban. *(ISO A.5.23, A.5.34)*
+- **Iratok:** csak a kinyert adatok és az összefoglaló kerülnek a `documents` gyűjteménybe (SHA-256 alapján
+  duplikátum-szűréssel), a fájl nem.
+- **Bejelentések:** a `tickets` gyűjteménybe kerülnek, és e-mailben mennek a fejlesztőnek (`TICKET_TO`); óránként
+  legfeljebb 6 felhasználónként. A technikai napló a böngészőhibák rövid, e-mail-címektől és hosszú tokenektől
+  megtisztított sorai; a felhasználó a küldés előtt megnézheti és kikapcsolhatja. *(ISO A.5.24, A.8.15)*
+- **Keretek:** csevegés 40/óra, iratfeldolgozás 40 fájl/óra, kézi jogszabály-ellenőrzés 4/óra felhasználónként
+  (`assistant_usage`, automatikusan lejár).
+
 ## Élesítés előtt
 
+- A Vercel-projektben beállítani a `GEMINI_API_KEY`, `EMAIL_USER`, `EMAIL_PASS`, `SMTP_*` és `CRON_SECRET` változókat.
 - HTTPS mögé tenni; a `TOTP_ENCRYPTION_KEY`-t titokkezelőbe áthelyezni (cseréje után
   minden hitelesítőt újra kell állítani). Ennek az alrendszernek saját kulcsa van.
 - A MongoDB-felhasználót a szükséges adatbázisokra korlátozni.

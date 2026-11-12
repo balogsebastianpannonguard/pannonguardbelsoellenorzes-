@@ -26,8 +26,8 @@ export async function translateDocument(_previous: FormState, formData: FormData
 
   const target = String(formData.get("target") ?? "hu") as Language;
   const tone = String(formData.get("tone") ?? "hivatalos") as Tone;
-  if (!(target in LANGUAGES)) return { error: "Válassz célnyelvet." };
-  if (!(tone in TONES)) return { error: "Válassz hangnemet." };
+  if (!Object.hasOwn(LANGUAGES, target)) return { error: "Válassz célnyelvet." };
+  if (!Object.hasOwn(TONES, tone)) return { error: "Válassz hangnemet." };
 
   let source = longText(formData, "source", 200_000);
   let title = source.split("\n", 1)[0]?.trim().slice(0, 80) ?? "";
@@ -92,7 +92,8 @@ export async function deleteTranslation(id: string): Promise<FormState> {
   if (!ObjectId.isValid(id)) return { error: "Ismeretlen fordítás." };
   await (await translations()).deleteOne({ _id: new ObjectId(id) });
   refresh();
-  return { ok: true };
+  // A törölt tétel oldaláról a listára lépünk, így nem villan fel a „nem található” oldal.
+  redirect("/forditas");
 }
 
 export async function goToTranslation(id: string) {

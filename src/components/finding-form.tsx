@@ -6,13 +6,15 @@ import { Feedback, Input, Label, Select, Textarea, buttonClass } from "@/compone
 import { createFinding, updateFinding } from "@/lib/actions/findings";
 import { SEVERITIES, STATUSES, type AuditOption, type FindingRow } from "@/lib/findings-meta";
 import type { FormState } from "@/lib/form";
+import { useKeepForm } from "@/components/use-keep-form";
 
 export function FindingForm({ finding, audits }: { finding?: FindingRow; audits: AuditOption[] }) {
   const edit = Boolean(finding);
   const [state, action, pending] = useActionState<FormState, FormData>(edit ? updateFinding : createFinding, {});
+  const { ref: keepRef, onSubmit: keepSubmit } = useKeepForm(action, state);
 
   return (
-    <form action={action} className="space-y-4">
+    <form ref={keepRef} onSubmit={keepSubmit} className="space-y-4">
       {finding && <input type="hidden" name="id" value={finding.id} />}
       <Label label="Cím">
         <Input name="title" required maxLength={160} defaultValue={finding?.title} placeholder="Pl. Hiányzó aláírás a leltárívon" />

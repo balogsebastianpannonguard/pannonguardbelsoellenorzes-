@@ -73,7 +73,7 @@ async function Tenders() {
                 <Link key={tender.id} href={`/palyazatok/${tender.id}`} className="pg-card block rounded-2xl p-5 hover:bg-white/5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-display text-lg font-semibold">{tender.name}</p>
+                      <p className="font-display text-lg font-semibold [overflow-wrap:anywhere]">{tender.name}</p>
                       <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-sm text-white/50">
                         {tender.issuer && <span>{tender.issuer}</span>}
                         {tender.owner && (

@@ -1,8 +1,11 @@
 import "server-only";
 import { z } from "zod";
-import { GEMINI_FAST, GEMINI_SMART, GeminiError, geminiAvailable, geminiGenerate } from "@/lib/gemini";
+import { GEMINI_FAST, GEMINI_SMART, GeminiError, geminiAvailable, geminiGenerate, type GeminiPart } from "@/lib/gemini";
 
 export class AiError extends Error {}
+
+/** Egy AI-hívás teljes időkerete; a műveleteket futtató oldalak `maxDuration = 120` másodperce alatt marad. */
+const AI_TIMEOUT_MS = 95_000;
 
 const MISSING_KEY = "Az AI-funkciókhoz GEMINI_API_KEY szükséges.";
 
@@ -29,7 +32,7 @@ export async function aiText({ system, content, tier = "smart", maxTokens = 8000
       system,
       turns: [{ role: "user", parts: [{ text: content }] }],
       maxTokens,
-      timeoutMs: 150_000,
+      timeoutMs: AI_TIMEOUT_MS,
     });
   } catch (error) {
     explain(error);
@@ -44,7 +47,8 @@ export async function aiJson<T extends z.ZodType>({
   tier = "smart",
 }: {
   system: string;
-  content: string;
+  /** Szöveg, vagy szöveg- és fájlrészek (PDF, kép) a szkennelt iratokhoz. */
+  content: string | GeminiPart[];
   schema: T;
   tier?: AiTier;
 }): Promise<z.infer<T>> {
@@ -55,16 +59,35 @@ export async function aiJson<T extends z.ZodType>({
     const raw = await geminiGenerate({
       model: tier === "cheap" ? GEMINI_FAST : GEMINI_SMART,
       system,
-      turns: [{ role: "user", parts: [{ text: content }] }],
+      turns: [{ role: "user", parts: typeof content === "string" ? [{ text: content }] : content }],
       maxTokens: 16_000,
       jsonSchema,
-      timeoutMs: 150_000,
+      timeoutMs: AI_TIMEOUT_MS,
     });
     const parsed = schema.safeParse(JSON.parse(raw));
     if (!parsed.success) throw new AiError("Az AI-válasz nem volt értelmezhető.");
     return parsed.data;
   } catch (error) {
     if (error instanceof SyntaxError) throw new AiError("Az AI-válasz nem volt értelmezhető.");
+    explain(error);
+  }
+}
+
+export type ChatTurn = { role: "user" | "assistant"; content: string };
+
+/** Rövid, olcsó csevegés a lebegő asszisztenshez (gyors modell, kis válaszkorlát). */
+export async function aiChat({ system, turns, maxTokens = 900 }: { system: string; turns: ChatTurn[]; maxTokens?: number }) {
+  if (!aiAvailable()) throw new AiError(MISSING_KEY);
+  try {
+    const reply = await geminiGenerate({
+      model: GEMINI_FAST,
+      system,
+      turns: turns.map(({ role, content }) => ({ role: role === "assistant" ? "model" : "user", parts: [{ text: content }] })),
+      maxTokens,
+      timeoutMs: 45_000,
+    });
+    return { reply };
+  } catch (error) {
     explain(error);
   }
 }

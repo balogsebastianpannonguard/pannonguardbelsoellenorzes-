@@ -5,15 +5,17 @@ import { FileUp, LoaderCircle, UploadCloud } from "lucide-react";
 import { Feedback, buttonClass } from "@/components/ui";
 import { uploadAuditFiles } from "@/lib/actions/audits";
 import type { FormState } from "@/lib/form";
+import { useKeepForm, uploadTooBig } from "@/components/use-keep-form";
 
 export function AuditUpload({ auditId }: { auditId: string }) {
   const [state, action, pending] = useActionState<FormState, FormData>(uploadAuditFiles, {});
   const [names, setNames] = useState<string[]>([]);
+  const { ref: keepRef, onSubmit: keepSubmit, clientError, clearClientError } = useKeepForm(action, state, { resetOnOk: true, check: uploadTooBig, onReset: () => setNames([]) });
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <form action={action} className="space-y-4">
+    <form ref={keepRef} onSubmit={keepSubmit} className="space-y-4">
       <input type="hidden" name="auditId" value={auditId} />
       <label
         onDragOver={(event) => {
@@ -27,6 +29,7 @@ export function AuditUpload({ auditId }: { auditId: string }) {
           if (event.dataTransfer.files.length && inputRef.current) {
             inputRef.current.files = event.dataTransfer.files;
             setNames([...event.dataTransfer.files].map((file) => file.name));
+            clearClientError();
           }
         }}
         className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition ${
@@ -44,11 +47,14 @@ export function AuditUpload({ auditId }: { auditId: string }) {
           accept=".xlsx,.csv,.pdf,.docx,.txt"
           required
           className="sr-only"
-          onChange={(event) => setNames([...(event.target.files ?? [])].map((file) => file.name))}
+          onChange={(event) => {
+            setNames([...(event.target.files ?? [])].map((file) => file.name));
+            clearClientError();
+          }}
         />
       </label>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Feedback error={state.error} message={state.ok ? state.message : undefined} />
+        <Feedback error={clientError ?? state.error} message={state.ok ? state.message : undefined} />
         <button type="submit" disabled={pending} className={buttonClass("primary")}>
           {pending ? <LoaderCircle size={17} aria-hidden className="animate-spin" /> : <FileUp size={17} aria-hidden />}
           {pending ? "Ellenőrzés…" : "Feltöltés és ellenőrzés"}

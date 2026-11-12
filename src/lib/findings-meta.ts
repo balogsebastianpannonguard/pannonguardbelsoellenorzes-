@@ -16,8 +16,8 @@ export const STATUS_TONE = { javasolt: "info", nyitott: "warning", folyamatban: 
 export const SOURCES = { kezi: "Kézi", ai: "AI-javaslat", fajl: "Fájl ellenőrzése" } as const;
 export type Source = keyof typeof SOURCES;
 
-export const isSeverity = (value: string): value is Severity => value in SEVERITIES;
-export const isStatus = (value: string): value is Status => value in STATUSES;
+export const isSeverity = (value: string): value is Severity => Object.hasOwn(SEVERITIES, value);
+export const isStatus = (value: string): value is Status => Object.hasOwn(STATUSES, value);
 
 export type FindingRow = {
   id: string;

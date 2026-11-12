@@ -1,12 +1,13 @@
 "use client";
 
 import { useActionState, useRef, useState, useTransition } from "react";
-import { ExternalLink, LoaderCircle, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
+import { CheckCheck, ExternalLink, LoaderCircle, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 import { Feedback, Input, Label, Pill, Textarea, buttonClass } from "@/components/ui";
-import { addLaw, checkEverything, checkOne, deleteLaw, saveLawMeta } from "@/lib/actions/legal";
+import { acknowledgeLaw, addLaw, checkEverything, checkOne, deleteLaw, saveLawMeta } from "@/lib/actions/legal";
 import { formatStamp } from "@/lib/dates";
 import type { FormState } from "@/lib/form";
 import type { LawRow } from "@/lib/legal";
+import { useKeepForm } from "@/components/use-keep-form";
 
 export function CheckAllButton() {
   const [pending, startTransition] = useTransition();
@@ -43,6 +44,7 @@ export function LawCard({ law, aiOn }: { law: LawRow; aiOn: boolean }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
   const [metaState, metaAction, metaPending] = useActionState<FormState, FormData>(saveLawMeta, {});
+  const { ref: keepRef, onSubmit: keepSubmit } = useKeepForm(metaAction, metaState);
   const state = STATE[law.state];
 
   return (
@@ -90,10 +92,24 @@ export function LawCard({ law, aiOn }: { law: LawRow; aiOn: boolean }) {
               ))}
             </div>
           </details>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() =>
+              startTransition(async () => {
+                const result = await acknowledgeLaw(law.id);
+                setError(result.error);
+              })
+            }
+            className={buttonClass("secondary", "sm")}
+          >
+            {pending ? <LoaderCircle size={15} aria-hidden className="animate-spin" /> : <CheckCheck size={15} aria-hidden />}
+            Átnéztem, a változás kezelve
+          </button>
         </div>
       )}
 
-      <form action={metaAction} className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_11rem]">
+      <form ref={keepRef} onSubmit={keepSubmit} className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_11rem]">
         <input type="hidden" name="id" value={law.id} />
         <Label label="Érintett belső szabályzat / teendő">
           <Textarea name="note" defaultValue={law.note} maxLength={1000} className="min-h-16" placeholder="Pl. Adatkezelési szabályzat felülvizsgálata" />
@@ -164,8 +180,8 @@ export function AddLawForm() {
       <Label label="Hivatkozás">
         <Input name="cite" required minLength={3} maxLength={120} placeholder="Pl. 2017. évi CL. törvény" />
       </Label>
-      <Label label="Jogszabálytár-cím" hint="A Nemzeti Jogszabálytár oldalának címe, https://njt.hu/…">
-        <Input name="url" type="url" required maxLength={300} placeholder="https://njt.hu/jogszabaly/2017-150-00-00" />
+      <Label label="Jogszabálytár-cím" hint="A Nemzeti Jogszabálytár oldalának címe, https://njt.jog.gov.hu/… (a régi njt.hu is jó)">
+        <Input name="url" type="url" required maxLength={300} placeholder="https://njt.jog.gov.hu/jogszabaly/2017-150-00-00" />
       </Label>
       <Label label="Miért releváns?">
         <Textarea name="why" maxLength={400} className="min-h-20" placeholder="Nem kötelező" />

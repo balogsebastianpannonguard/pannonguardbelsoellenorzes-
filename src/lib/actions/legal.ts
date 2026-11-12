@@ -2,7 +2,7 @@
 
 import { refresh } from "next/cache";
 import { DAY, text, type FormState } from "@/lib/form";
-import { BASE_LAWS, checkAllLaws, checkLaw, insertCustomLaw, lawExists, removeCustomLaw, saveMeta, validLawUrl } from "@/lib/legal";
+import { BASE_LAWS, acknowledgeChange, checkAllLaws, checkLaw, insertCustomLaw, lawExists, removeCustomLaw, saveMeta, validLawUrl } from "@/lib/legal";
 import { requireUser } from "@/lib/session";
 
 const ID = /^[a-z0-9]{2,24}$/;
@@ -16,7 +16,7 @@ export async function addLaw(_previous: FormState, formData: FormData): Promise<
 
   if (name.length < 3) return { error: "Add meg a jogszabály nevét." };
   if (cite.length < 3) return { error: "Add meg a hivatkozást (pl. 2012. évi I. törvény)." };
-  if (!validLawUrl(url)) return { error: "A cím a Nemzeti Jogszabálytár (https://njt.hu/…) oldalára mutasson." };
+  if (!validLawUrl(url)) return { error: "A cím a Nemzeti Jogszabálytár (https://njt.jog.gov.hu/…) oldalára mutasson." };
 
   const id = await insertCustomLaw({ name, cite, url, why }, user.name);
   // Az alapállapot azonnal rögzül, így az első tényleges változás már észlelhető.
@@ -37,6 +37,14 @@ export async function checkOne(id: string): Promise<FormState> {
   await requireUser();
   if (typeof id !== "string" || !ID.test(id) || !(await lawExists(id))) return { error: "Ismeretlen jogszabály." };
   await checkLaw(id);
+  refresh();
+  return { ok: true };
+}
+
+export async function acknowledgeLaw(id: string): Promise<FormState> {
+  await requireUser();
+  if (typeof id !== "string" || !ID.test(id) || !(await lawExists(id))) return { error: "Ismeretlen jogszabály." };
+  await acknowledgeChange(id);
   refresh();
   return { ok: true };
 }

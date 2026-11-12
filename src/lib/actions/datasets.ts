@@ -35,7 +35,10 @@ export async function uploadDataset(_previous: FormState, formData: FormData): P
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     console.error("Adatkészlet-feltöltési hiba:", (error as Error).name);
-    return { error: message.startsWith("A táblázatban") ? message : "A fájl nem dolgozható fel (sérült vagy jelszóval védett?)." };
+    if (/BSONObjectTooLarge|too large|exceeds/i.test(`${(error as Error).name} ${message}`)) {
+      return { error: "A táblázat túl sok adatot tartalmaz egy adatállományhoz. Bontsd kisebb részekre (kevesebb sor vagy oszlop), és töltsd fel külön." };
+    }
+    return { error: message.startsWith("A táblázatban") || message.startsWith("Csak ") ? message : "A fájl nem dolgozható fel (sérült vagy jelszóval védett?)." };
   }
   refresh();
   redirect(`/adatfeldolgozas/${id}`);

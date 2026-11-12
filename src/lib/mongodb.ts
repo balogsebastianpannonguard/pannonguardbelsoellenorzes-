@@ -33,6 +33,11 @@ async function connect(uri: string) {
     db.collection("recommendations").createIndex({ findingId: 1 }),
     db.collection("recommendations").createIndex({ createdAt: -1 }),
     db.collection("legal_laws").createIndex({ createdAt: 1 }),
+    db.collection("assistant_usage").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    db.collection("documents").createIndex({ sha256: 1 }, { unique: true }),
+    db.collection("documents").createIndex({ createdAt: -1 }),
+    db.collection("tickets").createIndex({ number: 1 }, { unique: true }),
+    db.collection("tickets").createIndex({ createdAt: -1 }),
   ]);
   return client;
 }

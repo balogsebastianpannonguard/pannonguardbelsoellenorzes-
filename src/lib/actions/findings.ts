@@ -79,11 +79,14 @@ export async function updateFinding(_previous: FormState, formData: FormData): P
   if (current.severity !== fields.severity) {
     entries.push({ at: now, by: user.name, action: `Súlyosság: ${SEVERITIES[current.severity]} → ${SEVERITIES[fields.severity]}` });
   }
+  // A meg nem adott mezők törlődnek; a $set-be csak a kitöltöttek kerülnek, különben ütközne a $unset-tel.
+  const cleared = (["evidence", "area", "owner", "dueDate", "auditId"] as const).filter((key) => fields[key] === undefined);
+  const filled = Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined));
   await collection.updateOne(
     { _id: current._id },
     {
-      $set: { ...fields, status, updatedAt: now },
-      $unset: Object.fromEntries((["evidence", "area", "owner", "dueDate", "auditId"] as const).filter((key) => fields[key] === undefined).map((key) => [key, ""])),
+      $set: { ...filled, status, updatedAt: now },
+      ...(cleared.length && { $unset: Object.fromEntries(cleared.map((key) => [key, ""])) }),
       $push: { history: { $each: entries, $slice: -100 } },
     },
   );
@@ -117,7 +120,8 @@ export async function deleteFinding(id: string): Promise<FormState> {
   await (await findings()).deleteOne({ _id: objectId });
   await (await getDb()).collection("recommendations").deleteMany({ findingId: objectId });
   refresh();
-  return { ok: true };
+  // A törölt tétel oldaláról a listára lépünk, így nem villan fel a „nem található” oldal.
+  redirect("/hianyossagok");
 }
 
 /* ---------- Feltárás a feltöltött ellenőrzési adatokból ---------- */

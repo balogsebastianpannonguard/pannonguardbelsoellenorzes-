@@ -189,10 +189,12 @@ export async function destroyAllSessions(userId: ObjectId) {
 }
 
 export async function countActiveSessions(userId: ObjectId) {
+  // A 60 perce tétlen munkamenet már lejárt, akkor is, ha a törlés még nem történt meg.
   return (await sessions()).countDocuments({
     userId,
     stage: "full",
     expiresAt: { $gt: new Date() },
+    lastSeenAt: { $gt: new Date(Date.now() - IDLE_TTL_MS) },
   });
 }
 

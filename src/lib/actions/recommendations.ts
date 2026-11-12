@@ -71,7 +71,8 @@ export async function deleteRecommendation(id: string): Promise<FormState> {
   if (!ObjectId.isValid(id)) return { error: "Ismeretlen javaslat." };
   await (await recommendations()).deleteOne({ _id: new ObjectId(id) });
   refresh();
-  return { ok: true };
+  // A törölt tétel oldaláról a listára lépünk, így nem villan fel a „nem található” oldal.
+  redirect("/javaslatok");
 }
 
 const DraftSchema = z.object({

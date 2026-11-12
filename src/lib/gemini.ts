@@ -61,16 +61,21 @@ export async function geminiGenerate({
     },
   });
 
+  // A teljes időkeret az újrapróbálásokkal együtt érvényes, hogy a szerverfüggvény időkorlátja előtt barátságos hibát adjunk.
+  const deadline = Date.now() + timeoutMs;
   let lastStatus: number | undefined;
   for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt) await sleep(700 * attempt);
+    if (attempt) {
+      if (deadline - Date.now() < 10_000) throw new GeminiError("Az AI túl sokáig válaszolt, próbáld újra rövidebb bemenettel.");
+      await sleep(700 * attempt);
+    }
     let response: Response & { _status?: number };
     try {
       const raw = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: "POST",
         headers: { "content-type": "application/json", "x-goog-api-key": key },
         body,
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: AbortSignal.timeout(Math.max(1_000, deadline - Date.now())),
         cache: "no-store",
       });
       lastStatus = raw.status;

@@ -22,12 +22,14 @@ import {
   type TenderItemView,
   type TenderView,
 } from "@/lib/tenders-shared";
+import { useKeepForm } from "@/components/use-keep-form";
 
 export function TenderForm({ tender }: { tender?: TenderView }) {
   const [state, action, pending] = useActionState<FormState, FormData>(tender ? updateTender : createTender, {});
+  const { ref: keepRef, onSubmit: keepSubmit } = useKeepForm(action, state, { resetOnOk: !tender });
 
   return (
-    <form action={action} className="space-y-4">
+    <form ref={keepRef} onSubmit={keepSubmit} className="space-y-4">
       {tender && <input type="hidden" name="id" value={tender.id} />}
       <Label label="Pályázat neve">
         <Input name="name" required minLength={3} maxLength={160} defaultValue={tender?.name} placeholder="Pl. Digitális fejlesztési pályázat" />

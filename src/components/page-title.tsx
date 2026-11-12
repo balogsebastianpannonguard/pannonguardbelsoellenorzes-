@@ -14,7 +14,7 @@ export function PageTitle({
   return (
     <div className="pg-rise">
       <p className="text-xs font-semibold tracking-[0.22em] text-mint uppercase">{eyebrow}</p>
-      <h1 className="mt-2 font-display text-3xl leading-tight font-semibold tracking-tight sm:text-4xl">
+      <h1 className="mt-2 font-display text-3xl leading-tight font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-4xl">
         {title} {accent && <span className="pg-accent-text">{accent}</span>}
       </h1>
       {children && <div className="mt-2 max-w-2xl text-white/60">{children}</div>}

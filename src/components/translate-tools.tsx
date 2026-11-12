@@ -34,7 +34,8 @@ export function TranslationTools({ id, title, translated }: { id: string; title:
           link.href = url;
           link.download = `${title.replace(/[^\p{L}\p{N}]+/gu, "-").slice(0, 50) || "forditas"}.txt`;
           link.click();
-          URL.revokeObjectURL(url);
+          // Azonnali visszavonásnál a Safari és a Firefox nem mindig tölti le a fájlt.
+          setTimeout(() => URL.revokeObjectURL(url), 1500);
         }}
       >
         <Download size={15} aria-hidden /> TXT letöltése

@@ -7,6 +7,7 @@ import { Feedback, Input, Label, Select, Textarea, buttonClass } from "@/compone
 import { createRecommendation, deleteRecommendation, generateRecommendation, setRecommendationStatus, updateRecommendation } from "@/lib/actions/recommendations";
 import type { FormState } from "@/lib/form";
 import { PRIORITIES, REC_STATUSES, type RecommendationRow } from "@/lib/recommendations-meta";
+import { useKeepForm } from "@/components/use-keep-form";
 
 type FindingOption = { id: string; title: string };
 
@@ -59,9 +60,10 @@ export function RecommendationGenerate({ findingId, findings, aiOn }: { findingI
 export function RecommendationForm({ recommendation, findings }: { recommendation?: RecommendationRow; findings?: FindingOption[] }) {
   const edit = Boolean(recommendation);
   const [state, action, pending] = useActionState<FormState, FormData>(edit ? updateRecommendation : createRecommendation, {});
+  const { ref: keepRef, onSubmit: keepSubmit } = useKeepForm(action, state, { resetOnOk: !edit });
 
   return (
-    <form action={action} className="space-y-4">
+    <form ref={keepRef} onSubmit={keepSubmit} className="space-y-4">
       {recommendation && <input type="hidden" name="id" value={recommendation.id} />}
       {!edit && (
         <Label label="Megállapítás">

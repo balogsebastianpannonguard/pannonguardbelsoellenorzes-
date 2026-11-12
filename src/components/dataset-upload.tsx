@@ -5,15 +5,17 @@ import { FileUp, LoaderCircle, UploadCloud } from "lucide-react";
 import { Feedback, Input, Label, buttonClass } from "@/components/ui";
 import { uploadDataset } from "@/lib/actions/datasets";
 import type { FormState } from "@/lib/form";
+import { useKeepForm, uploadTooBig } from "@/components/use-keep-form";
 
 export function DatasetUpload() {
   const [state, action, pending] = useActionState<FormState, FormData>(uploadDataset, {});
   const [fileName, setFileName] = useState("");
+  const { ref: keepRef, onSubmit: keepSubmit, clientError, clearClientError } = useKeepForm(action, state, { resetOnOk: true, check: uploadTooBig, onReset: () => setFileName("") });
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <form action={action} className="space-y-4">
+    <form ref={keepRef} onSubmit={keepSubmit} className="space-y-4">
       <Label label="Név" hint="Ha üresen hagyod, a fájl neve lesz.">
         <Input name="name" maxLength={120} placeholder="Pl. 2026. évi beszerzések" />
       </Label>
@@ -32,6 +34,7 @@ export function DatasetUpload() {
             transfer.items.add(file);
             inputRef.current.files = transfer.files;
             setFileName(file.name);
+            clearClientError();
           }
         }}
         className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition ${
@@ -48,11 +51,14 @@ export function DatasetUpload() {
           accept=".xlsx,.csv"
           required
           className="sr-only"
-          onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")}
+          onChange={(event) => {
+            setFileName(event.target.files?.[0]?.name ?? "");
+            clearClientError();
+          }}
         />
       </label>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Feedback error={state.error} message={state.ok ? state.message : undefined} />
+        <Feedback error={clientError ?? state.error} message={state.ok ? state.message : undefined} />
         <button type="submit" disabled={pending} className={buttonClass("primary")}>
           {pending ? <LoaderCircle size={17} aria-hidden className="animate-spin" /> : <FileUp size={17} aria-hidden />}
           {pending ? "Feldolgozás…" : "Feltöltés"}
