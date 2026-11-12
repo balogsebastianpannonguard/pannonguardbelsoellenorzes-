@@ -2,6 +2,7 @@ import "server-only";
 import type { ObjectId } from "mongodb";
 import type { Cell } from "@/lib/files";
 import { getDb } from "@/lib/mongodb";
+import { ownCollection } from "@/lib/owner";
 
 export type DatasetDoc = {
   _id: ObjectId;
@@ -14,7 +15,8 @@ export type DatasetDoc = {
   createdBy: string;
 };
 
-export const datasets = async () => (await getDb()).collection<DatasetDoc>("datasets");
+/** A belépett felhasználó adatállományai. */
+export const datasets = async () => ownCollection((await getDb()).collection<DatasetDoc>("datasets"));
 
 export type ColumnKind = "szám" | "szöveg" | "dátum" | "vegyes" | "üres";
 

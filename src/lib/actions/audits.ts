@@ -3,12 +3,18 @@
 import { ObjectId } from "mongodb";
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
+import { Binary } from "mongodb";
+import { AiError, aiAvailable, aiTranscribe } from "@/lib/ai";
 import {
   analyzeTable,
   analyzeText,
+  auditFileBlobs,
   auditFiles,
   audits,
+  contentTypeOf,
+  isImageFile,
   MAX_STORED_TEXT,
+  needsOcr,
   sortIssues,
   tableText,
   type AuditFileDoc,
@@ -52,6 +58,8 @@ export async function deleteAudit(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!ObjectId.isValid(id)) return;
   const auditId = new ObjectId(id);
+  const fileIds = (await (await auditFiles()).find({ auditId }, { projection: { _id: 1 } }).toArray()).map((file) => file._id);
+  if (fileIds.length) await (await auditFileBlobs()).deleteMany({ _id: { $in: fileIds } });
   await (await auditFiles()).deleteMany({ auditId });
   await (await audits()).deleteOne({ _id: auditId });
   refresh();
@@ -82,7 +90,8 @@ export async function uploadAuditFiles(_previous: FormState, formData: FormData)
     try {
       const buffer = Buffer.from(await file.arrayBuffer());
       let doc: Omit<AuditFileDoc, "_id">;
-      const base = { auditId: new ObjectId(auditId), name, size: file.size, uploadedAt: new Date(), uploadedBy: user.name };
+      const contentType = contentTypeOf(name);
+      const base = { auditId: new ObjectId(auditId), name, size: file.size, uploadedAt: new Date(), uploadedBy: user.name, stored: true, contentType };
 
       if (isTableFile(name)) {
         try {
@@ -94,19 +103,26 @@ export async function uploadAuditFiles(_previous: FormState, formData: FormData)
           // A hiányos táblázat is bekerül a nyilvántartásba, a hibával együtt.
           doc = { ...base, kind: "table", text: "", issues: [{ level: "error", message }] };
         }
-      } else if (isTextFile(name)) {
-        const extracted = await extractDocumentText(buffer, name);
+      } else if (isTextFile(name) || isImageFile(name)) {
+        const extracted = isImageFile(name) ? { text: "", pages: undefined } : await extractDocumentText(buffer, name);
+        const scanned = (name.toLowerCase().endsWith(".pdf") || isImageFile(name)) && needsOcr(extracted.text, extracted.pages);
+        const ocrText = scanned ? await recognize(buffer, contentType, name) : undefined;
+        const finalText = ocrText?.text || extracted.text;
         doc = {
           ...base,
           kind: "text",
-          text: extracted.text.slice(0, MAX_STORED_TEXT),
-          issues: sortIssues(analyzeText(extracted.text, name, extracted.pages)),
+          text: finalText.slice(0, MAX_STORED_TEXT),
+          ocr: Boolean(ocrText?.text),
+          issues: sortIssues([...analyzeText(finalText, name, extracted.pages, Boolean(ocrText?.text)), ...(ocrText?.issue ? [ocrText.issue] : [])]),
         };
       } else {
         problems.push(`${name}: nem támogatott fájltípus`);
         continue;
       }
-      await collection.insertOne({ _id: new ObjectId(), ...doc });
+      const _id = new ObjectId();
+      // Előbb az eredeti fájl, hogy a nyilvántartásban ne legyen „árva” tétel.
+      await (await auditFileBlobs()).insertOne({ _id, data: new Binary(buffer), contentType });
+      await collection.insertOne({ _id, ...doc });
       saved += 1;
     } catch (error) {
       console.error("Ellenőri fájl feldolgozási hiba:", (error as Error).name);
@@ -126,6 +142,39 @@ export async function deleteAuditFile(formData: FormData) {
   await requireUser();
   const id = String(formData.get("id") ?? "");
   if (!ObjectId.isValid(id)) return;
-  await (await auditFiles()).deleteOne({ _id: new ObjectId(id) });
+  const result = await (await auditFiles()).deleteOne({ _id: new ObjectId(id) });
+  if (result.deletedCount) await (await auditFileBlobs()).deleteOne({ _id: new ObjectId(id) });
   refresh();
+}
+
+/** Szkennelt PDF vagy kép szövegének felismerése; a hibát tájékoztató tételként adja vissza, nem dob. */
+async function recognize(buffer: Buffer, contentType: string, name: string) {
+  if (!aiAvailable()) {
+    return { text: "", issue: { level: "warning" as const, message: "A szövegfelismeréshez (OCR) AI-kulcs kell (GEMINI_API_KEY); beállítás után a fájl oldalán újrafuttatható." } };
+  }
+  try {
+    return { text: await aiTranscribe({ data: buffer, mimeType: contentType, fileName: name }) };
+  } catch (error) {
+    const reason = error instanceof AiError ? error.message : "ismeretlen hiba";
+    return { text: "", issue: { level: "warning" as const, message: `A szövegfelismerés most nem sikerült (${reason}); a fájl oldalán újrafuttatható.` } };
+  }
+}
+
+/** Szövegfelismerés (OCR) utólagos futtatása egy már feltöltött, szkennelt fájlon. */
+export async function recognizeAuditFile(id: string): Promise<FormState> {
+  await requireUser();
+  if (!ObjectId.isValid(id)) return { error: "Ismeretlen fájl." };
+  if (!aiAvailable()) return { error: "A szövegfelismeréshez AI-kulcs kell (GEMINI_API_KEY)." };
+  const _id = new ObjectId(id);
+  const [file, blob] = await Promise.all([(await auditFiles()).findOne({ _id }, { projection: { name: 1 } }), (await auditFileBlobs()).findOne({ _id })]);
+  if (!file) return { error: "A fájl nem található." };
+  if (!blob) return { error: "Az eredeti fájl nincs meg (a tárolás bevezetése előtt töltötték fel). Töltsd fel újra." };
+  const result = await recognize(Buffer.from(blob.data.buffer), blob.contentType, file.name);
+  if (!result.text) return { error: result.issue?.message ?? "A fájlban nem található szöveg." };
+  await (await auditFiles()).updateOne(
+    { _id },
+    { $set: { text: result.text.slice(0, MAX_STORED_TEXT), ocr: true, issues: sortIssues(analyzeText(result.text, file.name, undefined, true)) } },
+  );
+  refresh();
+  return { ok: true, message: "A szöveg felismerve, az ellenőrzés frissítve." };
 }

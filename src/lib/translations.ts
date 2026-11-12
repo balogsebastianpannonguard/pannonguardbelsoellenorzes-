@@ -1,6 +1,7 @@
 import "server-only";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { ownCollection } from "@/lib/owner";
 
 export type TranslationDoc = {
   _id: ObjectId;
@@ -15,7 +16,8 @@ export type TranslationDoc = {
   createdBy: string;
 };
 
-export const translations = async () => (await getDb()).collection<TranslationDoc>("translations");
+/** A belépett felhasználó fordításai. */
+export const translations = async () => ownCollection((await getDb()).collection<TranslationDoc>("translations"));
 
 export type TranslationRow = {
   id: string;

@@ -1,6 +1,7 @@
 import "server-only";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { ownCollection } from "@/lib/owner";
 import type { ItemStatus, TenderItemView, TenderStatus, TenderView } from "@/lib/tenders-shared";
 
 export type TenderDocument = {
@@ -18,7 +19,8 @@ export type TenderDocument = {
   updatedAt: Date;
 };
 
-export const tenders = async () => (await getDb()).collection<TenderDocument>("tenders");
+/** A belépett felhasználó pályázatai. */
+export const tenders = async () => ownCollection((await getDb()).collection<TenderDocument>("tenders"));
 
 function view(doc: TenderDocument): TenderView {
   return {

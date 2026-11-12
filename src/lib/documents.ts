@@ -6,6 +6,7 @@ import { aiJson } from "@/lib/ai";
 import { extractDocumentText, parseTable } from "@/lib/files";
 import type { GeminiPart } from "@/lib/gemini";
 import { getDb } from "@/lib/mongodb";
+import { ownCollection } from "@/lib/owner";
 import { DOC_TYPES, type DigitizeResult, type DocData, type DocRow } from "@/lib/pajzs-types";
 
 type DocumentRecord = {
@@ -18,7 +19,8 @@ type DocumentRecord = {
   createdBy: string;
 };
 
-export const digitizedDocuments = async () => (await getDb()).collection<DocumentRecord>("documents");
+/** A belépett felhasználó digitalizált iratai (a duplikátumszűrés is felhasználónként értendő). */
+export const digitizedDocuments = async () => ownCollection((await getDb()).collection<DocumentRecord>("documents"));
 
 const DocSchema = z.object({
   docType: z.enum(Object.keys(DOC_TYPES) as [string, ...string[]]).describe("Az irat típusa."),

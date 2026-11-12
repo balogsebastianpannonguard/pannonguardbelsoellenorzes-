@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowLeft, CircleAlert, FileSpreadsheet, FileText, Files, Info, TriangleAlert, UploadCloud } from "lucide-react";
+import { ArrowLeft, CircleAlert, Download, Eye, FileImage, FileSpreadsheet, FileText, Files, Info, ScanText, TriangleAlert, UploadCloud } from "lucide-react";
 import { AuditDelete } from "@/components/audit-delete";
 import { AuditUpload } from "@/components/audit-upload";
 import { PageTitle } from "@/components/page-title";
-import { Empty, Panel, Pill, Skeleton, Stat } from "@/components/ui";
+import { Empty, Panel, Pill, Skeleton, Stat, buttonClass } from "@/components/ui";
 import { auditFiles, audits, type IssueLevel } from "@/lib/audits";
 import { deleteAudit, deleteAuditFile } from "@/lib/actions/audits";
 import { formatStamp } from "@/lib/dates";
@@ -83,7 +83,8 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
           <Empty icon={Files} title="Még nincs feltöltött fájl" text="A feltöltés után itt látod az automatikus ellenőrzés eredményét." />
         ) : (
           files.map((file) => {
-            const Icon = file.kind === "table" ? FileSpreadsheet : FileText;
+            const Icon = file.kind === "table" ? FileSpreadsheet : /\.(png|jpe?g|webp)$/i.test(file.name) ? FileImage : FileText;
+            const preview = `/ellenori-adatok/${id}/fajl/${String(file._id)}`;
             const e = file.issues.filter((issue) => issue.level === "error").length;
             const w = file.issues.filter((issue) => issue.level === "warning").length;
             return (
@@ -93,7 +94,9 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
                     <Icon size={20} aria-hidden />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold break-all">{file.name}</p>
+                    <Link href={preview} className="font-semibold break-all hover:text-mint hover:underline hover:underline-offset-4">
+                      {file.name}
+                    </Link>
                     <p className="text-xs text-white/45">
                       {size(file.size)} · {formatStamp(file.uploadedAt)} · {file.uploadedBy}
                     </p>
@@ -102,8 +105,23 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
                     {e > 0 && <Pill tone="error">{e} hiba</Pill>}
                     {w > 0 && <Pill tone="warning">{w} figyelmeztetés</Pill>}
                     {e === 0 && w === 0 && <Pill tone="ok">Rendben</Pill>}
+                    {file.ocr && (
+                      <Pill tone="info" icon={ScanText}>
+                        OCR
+                      </Pill>
+                    )}
                     <AuditDelete id={String(file._id)} action={deleteAuditFile} confirmText={`Törlöd a(z) „${file.name}” fájlt?`} label="Fájl törlése" compact />
                   </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Link href={preview} className={buttonClass("secondary", "sm")}>
+                    <Eye size={15} aria-hidden /> Előnézet
+                  </Link>
+                  {file.stored && (
+                    <a href={`/ellenori-adatok/fajl/${String(file._id)}?letoltes=1`} download={file.name} className={buttonClass("secondary", "sm")}>
+                      <Download size={15} aria-hidden /> Letöltés
+                    </a>
+                  )}
                 </div>
                 <ul className="mt-4 space-y-1.5">
                   {file.issues.map((issue, index) => {

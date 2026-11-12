@@ -1,7 +1,8 @@
 import "server-only";
-import type { ObjectId } from "mongodb";
+import type { Binary, ObjectId } from "mongodb";
 import type { Cell } from "@/lib/files";
 import { getDb } from "@/lib/mongodb";
+import { ownCollection } from "@/lib/owner";
 
 export type AuditDoc = {
   _id: ObjectId;
@@ -30,10 +31,40 @@ export type AuditFileDoc = {
   uploadedAt: Date;
   uploadedBy: string;
   issues: AuditIssue[];
+  /** Az eredeti fájl megvan az `audit_file_blobs` gyűjteményben (előnézet, letöltés). */
+  stored?: boolean;
+  contentType?: string;
+  /** A szöveget szövegfelismerés (OCR) adta, mert a fájl szkennelt PDF vagy kép. */
+  ocr?: boolean;
 };
 
-export const audits = async () => (await getDb()).collection<AuditDoc>("audits");
-export const auditFiles = async () => (await getDb()).collection<AuditFileDoc>("audit_files");
+/** Az eredeti feltöltött fájl; az azonosítója megegyezik az ellenőri fájléval. */
+export type AuditFileBlob = { _id: ObjectId; data: Binary; contentType: string };
+
+/** A belépett felhasználó ellenőrzései és ellenőri fájljai. */
+export const audits = async () => ownCollection((await getDb()).collection<AuditDoc>("audits"));
+export const auditFiles = async () => ownCollection((await getDb()).collection<AuditFileDoc>("audit_files"));
+export const auditFileBlobs = async () => ownCollection((await getDb()).collection<AuditFileBlob>("audit_file_blobs"));
+
+const CONTENT_TYPES: Record<string, string> = {
+  pdf: "application/pdf",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  webp: "image/webp",
+  txt: "text/plain; charset=utf-8",
+  csv: "text/csv; charset=utf-8",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+};
+export const contentTypeOf = (name: string) => CONTENT_TYPES[name.split(".").pop()?.toLowerCase() ?? ""] ?? "application/octet-stream";
+/** A böngészőben biztonságosan, beágyazva megjeleníthető típusok; minden más csak letölthető. */
+export const previewKind = (contentType?: string) =>
+  contentType === "application/pdf" ? "pdf" : contentType?.startsWith("image/") ? "image" : contentType?.startsWith("text/") ? "text" : null;
+
+export const isImageFile = (name: string) => /\.(png|jpe?g|webp)$/i.test(name);
+/** Ha ennyinél kevesebb szöveg jut egy oldalra, a PDF-et szkenneltnek tekintjük, és szövegfelismerés kell. */
+export const needsOcr = (text: string, pages?: number) => text.trim().length < Math.max(40, (pages ?? 1) * 60);
 
 export const MAX_STORED_TEXT = 60_000;
 
@@ -144,8 +175,13 @@ export function analyzeTable(headers: string[], rows: Cell[][], truncated: boole
 }
 
 /** Beérkezéskori ellenőrzés szöveges iratokra (PDF, Word, szöveg). */
-export function analyzeText(text: string, fileName: string, pages?: number): AuditIssue[] {
+export function analyzeText(text: string, fileName: string, pages?: number, ocr = false): AuditIssue[] {
   const issues: AuditIssue[] = [];
+  if (ocr && text.trim().length) {
+    issues.push({ level: "info", message: "Szkennelt irat: a szöveget szövegfelismerés (OCR) adta, a pontosságát érdemes szúrópróbával ellenőrizni." });
+    const unreadable = (text.match(/\[olvashatatlan\]/g) ?? []).length;
+    if (unreadable) issues.push({ level: "warning", message: `${unreadable} olvashatatlan rész a szkennelt iratban.` });
+  }
   const isPdf = fileName.toLowerCase().endsWith(".pdf");
   const length = text.trim().length;
 
@@ -154,7 +190,9 @@ export function analyzeText(text: string, fileName: string, pages?: number): Aud
       level: "error",
       message: isPdf
         ? "Nincs kinyerhető szöveg: valószínűleg szkennelt (képes) PDF, szövegfelismerés (OCR) szükséges."
-        : "A fájl üres.",
+        : isImageFile(fileName)
+          ? "A képen nem található olvasható szöveg."
+          : "A fájl üres.",
     });
     return issues;
   }
@@ -162,7 +200,7 @@ export function analyzeText(text: string, fileName: string, pages?: number): Aud
   const words = text.split(/\s+/).filter(Boolean).length;
   issues.push({ level: "info", message: `${hu.format(length)} karakter, kb. ${hu.format(words)} szó${pages ? `, ${pages} oldal` : ""}.` });
   if (length < 200) issues.push({ level: "warning", message: `Nagyon rövid szöveg (${length} karakter), lehet, hogy hiányos.` });
-  if (isPdf && pages && length / pages < 150) {
+  if (!ocr && isPdf && pages && length / pages < 150) {
     issues.push({ level: "warning", message: "Oldalanként nagyon kevés szöveg van, a PDF részben szkennelt lehet." });
   }
   const garbled = (text.match(/�|[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g) ?? []).length;

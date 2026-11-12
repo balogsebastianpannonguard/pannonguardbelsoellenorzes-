@@ -2,6 +2,7 @@ import "server-only";
 import { ObjectId } from "mongodb";
 import { findings } from "@/lib/findings";
 import { getDb } from "@/lib/mongodb";
+import { ownCollection } from "@/lib/owner";
 import { PRIORITY_ORDER, type Priority, type RecommendationRow, type RecStatus } from "@/lib/recommendations-meta";
 
 export type RecommendationDoc = {
@@ -19,7 +20,8 @@ export type RecommendationDoc = {
   updatedAt: Date;
 };
 
-export const recommendations = async () => (await getDb()).collection<RecommendationDoc>("recommendations");
+/** A belépett felhasználó javaslatai. */
+export const recommendations = async () => ownCollection((await getDb()).collection<RecommendationDoc>("recommendations"));
 
 async function titles(ids: ObjectId[]) {
   const docs = ids.length ? await (await findings()).find({ _id: { $in: ids } }, { projection: { title: 1 } }).toArray() : [];

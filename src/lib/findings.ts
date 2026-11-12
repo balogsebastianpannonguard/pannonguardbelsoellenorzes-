@@ -1,6 +1,7 @@
 import "server-only";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { ownCollection } from "@/lib/owner";
 import {
   SEVERITY_ORDER,
   type AuditFileOption,
@@ -30,7 +31,8 @@ export type FindingDoc = {
   history: { at: Date; by: string; action: string }[];
 };
 
-export const findings = async () => (await getDb()).collection<FindingDoc>("findings");
+/** A belépett felhasználó megállapításai. */
+export const findings = async () => ownCollection((await getDb()).collection<FindingDoc>("findings"));
 
 /* A „Ellenőrzési adatok” munkaterület gyűjteményei; itt csak olvassuk őket (közös séma). */
 type AuditDoc = { _id: ObjectId; name: string; area?: string; createdAt: Date };
@@ -46,8 +48,8 @@ type AuditFileDoc = {
   issues: { level: "info" | "warning" | "error"; message: string }[];
 };
 
-const audits = async () => (await getDb()).collection<AuditDoc>("audits");
-const auditFiles = async () => (await getDb()).collection<AuditFileDoc>("audit_files");
+const audits = async () => ownCollection((await getDb()).collection<AuditDoc>("audits"));
+const auditFiles = async () => ownCollection((await getDb()).collection<AuditFileDoc>("audit_files"));
 
 export async function listAuditOptions(): Promise<AuditOption[]> {
   const docs = await (await audits()).find({}, { projection: { name: 1 } }).sort({ createdAt: -1 }).limit(200).toArray();

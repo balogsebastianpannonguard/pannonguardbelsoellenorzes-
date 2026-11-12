@@ -38,13 +38,13 @@ export function AuditUpload({ auditId }: { auditId: string }) {
       >
         <UploadCloud size={28} aria-hidden className="text-mint" />
         <span className="font-medium break-all">{names.length ? names.join(", ") : "Húzd ide a fájlokat, vagy kattints a tallózáshoz"}</span>
-        <span className="text-xs text-white/45">Excel, CSV, PDF, Word, szöveg – együtt legfeljebb 4 MB, egyszerre legfeljebb 8 fájl</span>
+        <span className="text-xs text-white/45">Excel, CSV, PDF (szkennelt is), Word, szöveg, fénykép – együtt legfeljebb 4 MB, egyszerre legfeljebb 8 fájl</span>
         <input
           ref={inputRef}
           name="files"
           type="file"
           multiple
-          accept=".xlsx,.csv,.pdf,.docx,.txt"
+          accept=".xlsx,.csv,.pdf,.docx,.txt,.png,.jpg,.jpeg,.webp"
           required
           className="sr-only"
           onChange={(event) => {

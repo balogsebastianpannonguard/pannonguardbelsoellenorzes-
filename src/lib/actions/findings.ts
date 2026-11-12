@@ -8,7 +8,7 @@ import { aiAvailable, aiJson } from "@/lib/ai";
 import { findings, getAuditFile, type FindingDoc } from "@/lib/findings";
 import { isSeverity, isStatus, SEVERITIES, STATUSES, type Severity, type Status } from "@/lib/findings-meta";
 import { DAY, longText, optional, text, type FormState } from "@/lib/form";
-import { getDb } from "@/lib/mongodb";
+import { recommendations } from "@/lib/recommendations";
 import { requireUser } from "@/lib/session";
 
 type Fields = Pick<FindingDoc, "title" | "description" | "evidence" | "area" | "severity" | "owner" | "dueDate" | "auditId">;
@@ -118,7 +118,7 @@ export async function deleteFinding(id: string): Promise<FormState> {
   if (!ObjectId.isValid(id)) return { error: "Ismeretlen megállapítás." };
   const objectId = new ObjectId(id);
   await (await findings()).deleteOne({ _id: objectId });
-  await (await getDb()).collection("recommendations").deleteMany({ findingId: objectId });
+  await (await recommendations()).deleteMany({ findingId: objectId });
   refresh();
   // A törölt tétel oldaláról a listára lépünk, így nem villan fel a „nem található” oldal.
   redirect("/hianyossagok");

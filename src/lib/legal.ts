@@ -4,6 +4,7 @@ import { gunzipSync, gzipSync } from "node:zlib";
 import { Binary, ObjectId } from "mongodb";
 import { aiAvailable, aiText } from "@/lib/ai";
 import { getDb } from "@/lib/mongodb";
+import { ownCollection } from "@/lib/owner";
 
 /** A figyelt jogszabályok alapkészlete; a belső ellenőrzés számára releváns okok mellett. */
 export const BASE_LAWS = [
@@ -95,8 +96,16 @@ type WatchDocument = {
   effectiveDate?: string;
 };
 
-export const customLaws = async () => (await getDb()).collection<LawDocument>("legal_laws");
+/** Felhasználónkénti jegyzet, hatálybalépés és az „átnéztem” időpontja egy jogszabályhoz. */
+type NoteDocument = { _id: ObjectId; lawId: string; note?: string; effectiveDate?: string; ackAt?: Date };
+
+/** Az összes egyéni jogszabály (a napi, felhasználótól független ellenőrzéshez). */
+const allCustomLaws = async () => (await getDb()).collection<LawDocument>("legal_laws");
+/** A belépett felhasználó saját egyéni jogszabályai. */
+export const customLaws = async () => ownCollection(await allCustomLaws());
+/** A Jogszabálytár letöltött állapota közös: a jogszabály szövege mindenkinek ugyanaz. */
 const watch = async () => (await getDb()).collection<WatchDocument>("legal_watch");
+const notes = async () => ownCollection((await getDb()).collection<NoteDocument>("legal_notes"));
 
 export type LawRow = {
   id: string;
@@ -164,7 +173,7 @@ async function findLaw(id: string): Promise<{ name: string; cite: string; url: s
   const base = BASE_LAWS.find((law) => law.id === id);
   if (base) return base;
   if (!ObjectId.isValid(id)) return null;
-  return (await (await customLaws()).findOne({ _id: new ObjectId(id) })) ?? null;
+  return (await (await allCustomLaws()).findOne({ _id: new ObjectId(id) })) ?? null;
 }
 
 /** Egy jogszabály ellenőrzése: első futáskor alapállapotot rögzít, később a változást észleli és összefoglalja. */
@@ -244,7 +253,7 @@ export async function checkLaw(id: string) {
 }
 
 export async function checkAllLaws() {
-  const custom = await (await customLaws()).find({}, { projection: { _id: 1 } }).toArray();
+  const custom = await (await allCustomLaws()).find({}, { projection: { _id: 1 } }).toArray();
   const ids = [...BASE_LAWS.map((law) => law.id as string), ...custom.map((law) => String(law._id))];
   await Promise.allSettled(
     ids.map((id) => checkLaw(id).catch((error) => console.error("Jogszabály-ellenőrzési hiba:", id, (error as Error).name))),
@@ -252,28 +261,33 @@ export async function checkAllLaws() {
 }
 
 export async function listLaws(): Promise<LawRow[]> {
-  const [custom, docs] = await Promise.all([
+  const [custom, docs, mine] = await Promise.all([
     (await customLaws()).find({}).sort({ createdAt: 1 }).limit(200).toArray(),
     (await watch()).find({}, { projection: { text: 0, hash: 0 } }).toArray(),
+    (await notes()).find({}).toArray(),
   ]);
   const byId = new Map(docs.map((doc) => [doc._id, doc]));
+  const noteById = new Map(mine.map((doc) => [doc.lawId, doc]));
   const rows = [
     ...BASE_LAWS.map((law) => ({ id: law.id as string, custom: false, name: law.name, cite: law.cite, why: law.why, url: law.url })),
     ...custom.map((law) => ({ id: String(law._id), custom: true, name: law.name, cite: law.cite, why: law.why, url: law.url })),
   ];
   return rows.map((law): LawRow => {
     const doc = byId.get(law.id);
+    const own = noteById.get(law.id);
+    // Ha a felhasználó a legutóbbi változás után jelölte átnézettnek, nála „nincs változás”.
+    const acknowledged = doc?.state === "changed" && own?.ackAt && doc.changedAt && own.ackAt >= doc.changedAt;
     return {
       ...law,
-      state: doc?.state ?? "unknown",
+      state: acknowledged ? "same" : (doc?.state ?? "unknown"),
       checkedAt: doc?.checkedAt?.toISOString(),
       changedAt: doc?.changedAt?.toISOString(),
       summary: doc?.summary || undefined,
       added: doc?.added ?? [],
       removed: doc?.removed ?? [],
       error: doc?.error,
-      note: doc?.note ?? "",
-      effectiveDate: doc?.effectiveDate ?? "",
+      note: own?.note ?? "",
+      effectiveDate: own?.effectiveDate ?? "",
       history: [...(doc?.history ?? [])].reverse().map((entry) => ({
         at: entry.at.toISOString(),
         summary: entry.summary,
@@ -285,26 +299,25 @@ export async function listLaws(): Promise<LawRow[]> {
 }
 
 export async function saveMeta(id: string, note: string, effectiveDate: string) {
-  await (await watch()).updateOne(
-    { _id: id },
-    { $set: { note, effectiveDate } },
-    { upsert: true },
-  );
+  await (await notes()).updateOne({ lawId: id }, { $set: { note, effectiveDate } }, { upsert: true });
 }
 
-/** A változás átnézve: a jogszabály újra „nincs változás” állapotú (az előzmények megmaradnak). */
+/** A változás átnézve (csak ennél a felhasználónál): újra „nincs változás”, az előzmények megmaradnak. */
 export async function acknowledgeChange(id: string) {
-  await (await watch()).updateOne({ _id: id, state: "changed" }, { $set: { state: "same" } });
+  await (await notes()).updateOne({ lawId: id }, { $set: { ackAt: new Date() } }, { upsert: true });
 }
 
+/** Alapkészletbeli, vagy a belépett felhasználó saját egyéni jogszabálya. */
 export async function lawExists(id: string) {
-  return (await findLaw(id)) !== null;
+  if (BASE_LAWS.some((law) => law.id === id)) return true;
+  if (!ObjectId.isValid(id)) return false;
+  return (await (await customLaws()).findOne({ _id: new ObjectId(id) }, { projection: { _id: 1 } })) !== null;
 }
 
 export async function removeCustomLaw(id: string) {
   if (!ObjectId.isValid(id)) return false;
   const result = await (await customLaws()).deleteOne({ _id: new ObjectId(id) });
-  if (result.deletedCount === 1) await (await watch()).deleteOne({ _id: id });
+  if (result.deletedCount === 1) await Promise.all([(await watch()).deleteOne({ _id: id }), (await notes()).deleteMany({ lawId: id })]);
   return result.deletedCount === 1;
 }
 
