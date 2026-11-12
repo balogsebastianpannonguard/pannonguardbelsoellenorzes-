@@ -15,7 +15,7 @@ export default function DataPage() {
   return (
     <div className="space-y-8">
       <PageTitle eyebrow="02 · Belső ellenőrzés" title="Adatok" accent="és ábrák.">
-        Tölts fel Excel- vagy CSV-táblázatot: az oszlopokat azonnal profilozzuk, az eredményt pedig diagramokban is megjeleníthető.
+        Tölts fel Excel-, CSV- vagy PDF-táblázatot: az oszlopokat azonnal profilozzuk, az eredményt pedig diagramokban is megjeleníthető.
       </PageTitle>
       <Suspense fallback={<Skeleton className="h-96" />}>
         <Content />

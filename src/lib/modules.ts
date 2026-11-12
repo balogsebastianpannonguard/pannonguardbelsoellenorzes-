@@ -44,7 +44,7 @@ export const MODULES: Module[] = [
     icon: ChartColumn,
     summary: "Nagy adatbázisok és táblázatok gyorsabb feldolgozása, az eredmények ábrákban is megjelenítve.",
     goals: [
-      "Excel- és CSV-állományok betöltése, az oszlopok ellenőrzése",
+      "Excel-, CSV- és PDF-állományok betöltése, az oszlopok ellenőrzése",
       "Összesítések, szűrések és összehasonlítások néhány kattintással",
       "Oszlop-, vonal- és kördiagramok automatikus készítése",
       "Az elkészült ábrák és táblák letölthetők jelentésekhez",

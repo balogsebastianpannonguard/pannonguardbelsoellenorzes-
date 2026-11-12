@@ -10,10 +10,11 @@ export type Cell = string | number | null;
 export type Table = { headers: string[]; rows: Cell[][] };
 
 const lower = (name: string) => name.toLowerCase();
-export const isTableFile = (name: string) => /\.(xlsx|csv)$/.test(lower(name));
+export const isTableFile = (name: string) => /\.(xlsx|csv|pdf)$/.test(lower(name));
+export const isPdfFile = (name: string) => lower(name).endsWith(".pdf");
 export const isTextFile = (name: string) => /\.(pdf|docx|txt)$/.test(lower(name));
 
-export const ACCEPT_TABLES = ".xlsx,.csv";
+export const ACCEPT_TABLES = ".xlsx,.csv,.pdf";
 export const ACCEPT_TEXT = ".pdf,.docx,.txt";
 export const ACCEPT_ALL = ".xlsx,.csv,.pdf,.docx,.txt";
 
@@ -81,17 +82,63 @@ export function toCell(value: unknown): Cell {
 export const MAX_ROWS = 5000;
 export const MAX_COLUMNS = 60;
 
-/** Excel- vagy CSV-táblázat: az első nem üres sor a fejléc. */
-export async function parseTable(buffer: Buffer, name: string): Promise<Table & { truncated: boolean }> {
+/**
+ * Táblázat egy szöveges PDF-ből, AI nélkül: a sorokat tabulátor vagy legalább két szóköz tagolja oszlopokra.
+ * Ha a PDF-ben nincs kinyerhető szöveg (szkennelt), hibát dob.
+ */
+async function pdfRows(buffer: Buffer): Promise<string[][]> {
+  const pdf = await getDocumentProxy(new Uint8Array(buffer));
+  const lines: string[][] = [];
+  for (let page = 1; page <= pdf.numPages; page++) {
+    const { items } = await (await pdf.getPage(page)).getTextContent();
+    // Az azonos magasságú szövegdarabok egy sort alkotnak; a nagyobb vízszintes hézag új cellát kezd.
+    const rows = new Map<number, { x: number; end: number; size: number; text: string }[]>();
+    for (const item of items as { str?: string; transform?: number[]; width?: number }[]) {
+      if (!item.str?.trim() || !item.transform) continue;
+      const y = Math.round(item.transform[5]);
+      const key = [...rows.keys()].find((existing) => Math.abs(existing - y) <= 2) ?? y;
+      const list = rows.get(key) ?? [];
+      list.push({ x: item.transform[4], end: item.transform[4] + (item.width ?? 0), size: Math.abs(item.transform[0]) || 10, text: item.str });
+      rows.set(key, list);
+    }
+    for (const y of [...rows.keys()].sort((a, b) => b - a)) {
+      const parts = rows.get(y)!.sort((a, b) => a.x - b.x);
+      const cells: string[] = [];
+      let previousEnd = -Infinity;
+      for (const part of parts) {
+        // Egy szóköznél (a betűméret ~0,3-a) nagyobb hézag már cellahatár.
+        const gap = part.x - previousEnd;
+        if (cells.length && gap < Math.max(2, part.size * 0.3)) cells[cells.length - 1] += (gap > part.size * 0.15 ? " " : "") + part.text;
+        else cells.push(part.text);
+        previousEnd = part.end;
+      }
+      const clean = cells.flatMap((cell) => cell.split(/\t| {2,}/)).map((cell) => cell.trim()).filter(Boolean);
+      if (clean.length) lines.push(clean);
+    }
+  }
+  if (!lines.length) throw new Error("A PDF-ben nincs kiolvasható szöveg (valószínűleg szkennelt). Az AI-kulcs bekapcsolásával a szkennelt táblázat is beolvasható.");
+  // A fejléc az első olyan sor, amelynek legalább annyi cellája van, mint a sorok jellemző szélessége.
+  const counts = lines.map((row) => row.length);
+  const typical = counts.sort((a, b) => a - b)[Math.floor(counts.length * 0.75)] ?? 1;
+  const start = Math.max(0, lines.findIndex((row) => row.length >= typical));
+  return lines.slice(start);
+}
+
+/** Excel-, CSV- vagy PDF-táblázat: az első nem üres sor a fejléc. A PDF-et a `rawRows` (pl. AI-kinyerés) is adhatja. */
+export async function parseTable(buffer: Buffer, name: string, rawRows?: unknown[][]): Promise<Table & { truncated: boolean }> {
   const file = lower(name);
   let raw: unknown[][];
-  if (file.endsWith(".xlsx")) {
+  if (rawRows) {
+    raw = rawRows;
+  } else if (file.endsWith(".pdf")) {
+    raw = await pdfRows(buffer);
+  } else if (file.endsWith(".xlsx")) {
     const sheets = await readXlsxFile(buffer);
     raw = (sheets[0]?.data ?? []) as unknown[][];
   } else if (file.endsWith(".csv")) {
     raw = parseCsv(buffer.toString("utf8"));
   } else {
-    throw new Error("Csak Excel (.xlsx) vagy CSV fájl tölthető fel.");
+    throw new Error("Csak Excel (.xlsx), CSV vagy PDF fájl tölthető fel.");
   }
   const filled = raw.filter((row) => row.some((cell) => cell !== null && cell !== undefined && String(cell).trim() !== ""));
   if (filled.length < 2) throw new Error("A táblázatban nincs fejléc és legalább egy adatsor.");

@@ -43,12 +43,12 @@ export function DatasetUpload() {
       >
         <UploadCloud size={28} aria-hidden className="text-mint" />
         <span className="font-medium break-all">{fileName || "Húzd ide a táblázatot, vagy kattints a tallózáshoz"}</span>
-        <span className="text-xs text-white/45">Excel (.xlsx) vagy CSV – legfeljebb 4 MB, az első 5000 sor kerül be</span>
+        <span className="text-xs text-white/45">Excel (.xlsx), CSV vagy PDF – legfeljebb 4 MB, az első 5000 sor kerül be</span>
         <input
           ref={inputRef}
           name="file"
           type="file"
-          accept=".xlsx,.csv"
+          accept=".xlsx,.csv,.pdf"
           required
           className="sr-only"
           onChange={(event) => {
