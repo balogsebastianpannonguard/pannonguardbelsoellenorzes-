@@ -1,5 +1,6 @@
 "use server";
 
+import { recordActivity } from "@/lib/activity";
 import { ObjectId } from "mongodb";
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
@@ -49,6 +50,7 @@ export async function createAudit(_previous: FormState, formData: FormData): Pro
     createdAt: new Date(),
     createdBy: user.name,
   });
+  await recordActivity("audit.create", { target: { type: "ellenőrzés", id: String(id), name } });
   refresh();
   redirect(`/ellenori-adatok/${id}`);
 }
@@ -61,7 +63,8 @@ export async function deleteAudit(formData: FormData) {
   const fileIds = (await (await auditFiles()).find({ auditId }, { projection: { _id: 1 } }).toArray()).map((file) => file._id);
   if (fileIds.length) await (await auditFileBlobs()).deleteMany({ _id: { $in: fileIds } });
   await (await auditFiles()).deleteMany({ auditId });
-  await (await audits()).deleteOne({ _id: auditId });
+  const audit = await (await audits()).findOneAndDelete({ _id: auditId });
+  if (audit) await recordActivity("audit.delete", { target: { type: "ellenőrzés", id, name: audit.name }, detail: { fájlok: fileIds.length } });
   refresh();
   redirect("/ellenori-adatok");
 }
@@ -123,6 +126,7 @@ export async function uploadAuditFiles(_previous: FormState, formData: FormData)
       // Előbb az eredeti fájl, hogy a nyilvántartásban ne legyen „árva” tétel.
       await (await auditFileBlobs()).insertOne({ _id, data: new Binary(buffer), contentType });
       await collection.insertOne({ _id, ...doc });
+      await recordActivity("auditfile.upload", { target: { type: "ellenőri fájl", id: String(_id), name }, detail: { méret: file.size } });
       saved += 1;
     } catch (error) {
       console.error("Ellenőri fájl feldolgozási hiba:", (error as Error).name);
@@ -142,8 +146,11 @@ export async function deleteAuditFile(formData: FormData) {
   await requireUser();
   const id = String(formData.get("id") ?? "");
   if (!ObjectId.isValid(id)) return;
-  const result = await (await auditFiles()).deleteOne({ _id: new ObjectId(id) });
-  if (result.deletedCount) await (await auditFileBlobs()).deleteOne({ _id: new ObjectId(id) });
+  const removed = await (await auditFiles()).findOneAndDelete({ _id: new ObjectId(id) });
+  if (removed) {
+    await (await auditFileBlobs()).deleteOne({ _id: new ObjectId(id) });
+    await recordActivity("auditfile.delete", { target: { type: "ellenőri fájl", id, name: removed.name } });
+  }
   refresh();
 }
 

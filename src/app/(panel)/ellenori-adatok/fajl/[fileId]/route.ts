@@ -1,4 +1,5 @@
 import { ObjectId } from "mongodb";
+import { recordActivity } from "@/lib/activity";
 import { auditFileBlobs, auditFiles, previewKind } from "@/lib/audits";
 import { requireUser } from "@/lib/session";
 
@@ -16,6 +17,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ file
   if (!file || !blob) return new Response("Nem található.", { status: 404 });
 
   const download = new URL(request.url).searchParams.has("letoltes");
+  if (download) await recordActivity("auditfile.download", { target: { type: "ellenőri fájl", id: fileId, name: file.name } });
   const inline = !download && previewKind(blob.contentType) !== null;
   const asciiName = file.name.replace(/[^\x20-\x7e]+/g, "_").replace(/["\\]/g, "_");
   return new Response(new Uint8Array(blob.data.buffer), {

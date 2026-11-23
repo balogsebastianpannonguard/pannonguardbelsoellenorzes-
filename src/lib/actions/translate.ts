@@ -1,5 +1,6 @@
 "use server";
 
+import { recordActivity } from "@/lib/activity";
 import { ObjectId } from "mongodb";
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
@@ -45,6 +46,7 @@ export async function translateDocument(_previous: FormState, formData: FormData
 
   try {
     const id = await runTranslation({ source, title, target, tone, userName: user.name });
+    await recordActivity("translation.create", { target: { type: "fordítás", id, name: title }, detail: { célnyelv: target, karakter: source.length } });
     refresh();
     return { ok: true, id };
   } catch (error) {
@@ -55,7 +57,9 @@ export async function translateDocument(_previous: FormState, formData: FormData
 export async function deleteTranslation(id: string): Promise<FormState> {
   await requireUser();
   if (!ObjectId.isValid(id)) return { error: "Ismeretlen fordítás." };
-  await (await translations()).deleteOne({ _id: new ObjectId(id) });
+  const doc = await (await translations()).findOne({ _id: new ObjectId(id) }, { projection: { title: 1 } });
+  const result = await (await translations()).deleteOne({ _id: new ObjectId(id) });
+  if (result.deletedCount) await recordActivity("translation.delete", { target: { type: "fordítás", id, name: doc?.title } });
   refresh();
   // A törölt tétel oldaláról a listára lépünk, így nem villan fel a „nem található” oldal.
   redirect("/forditas");
@@ -104,6 +108,7 @@ export async function updateTerm(input: z.input<typeof TermSchema>): Promise<Ter
   terms.splice(index < 0 ? terms.length : index, 0, updated);
 
   await collection.updateOne({ _id: doc._id }, { $set: { translated: text, terms, editedAt: new Date() } });
+  await recordActivity("translation.edit", { target: { type: "fordítás", id, name: doc.title }, detail: { kifejezés: `${source} → ${target}`.slice(0, 200) } });
 
   if (remember) {
     const now = new Date();
@@ -126,6 +131,7 @@ export async function saveTranslatedText(id: string, translated: string): Promis
   if (text.length > 400_000) return { error: "A szöveg túl hosszú." };
   const result = await (await translations()).updateOne({ _id: new ObjectId(id) }, { $set: { translated: text, editedAt: new Date() } });
   if (!result.matchedCount) return { error: "Ismeretlen fordítás." };
+  await recordActivity("translation.edit", { target: { type: "fordítás", id }, detail: { módosítás: "teljes szöveg" } });
   refresh();
   return { ok: true };
 }
@@ -151,6 +157,7 @@ export async function saveGlossaryEntry(_previous: FormState, formData: FormData
     { $set: { source, target, updatedAt: now }, $setOnInsert: { key, targetLanguage, createdAt: now } },
     { upsert: true },
   );
+  await recordActivity("glossary.save", { detail: { kifejezés: `${source} → ${target}`.slice(0, 200), nyelv: targetLanguage } });
   refresh();
   return { ok: true, message: "Mentve a szótárba." };
 }
@@ -158,7 +165,8 @@ export async function saveGlossaryEntry(_previous: FormState, formData: FormData
 export async function deleteGlossaryEntry(id: string): Promise<FormState> {
   await requireUser();
   if (!ObjectId.isValid(id)) return { error: "Ismeretlen bejegyzés." };
-  await (await glossary()).deleteOne({ _id: new ObjectId(id) });
+  const entry = await (await glossary()).findOneAndDelete({ _id: new ObjectId(id) });
+  if (entry) await recordActivity("glossary.delete", { detail: { kifejezés: `${entry.source} → ${entry.target}`.slice(0, 200) } });
   refresh();
   return { ok: true };
 }

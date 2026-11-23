@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import type { BetaContentBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { z } from "zod";
+import { recordExternalSend } from "@/lib/activity";
 import { GEMINI_FAST, GEMINI_SMART, GeminiError, geminiAvailable, geminiGenerate, type GeminiPart } from "@/lib/gemini";
 
 /**
@@ -66,20 +67,27 @@ function shouldFallBack() {
   return geminiAvailable();
 }
 
-async function withFallback<T>(claude: () => Promise<T>, gemini: () => Promise<T>): Promise<T> {
+type SendInfo = { purpose: string; chars: number };
+const GEMINI_NAME = "Google Gemini";
+
+/** Minden külső AI-hívás előtt naplózzuk, melyik szolgáltató kap adatot, milyen célra és mennyit (a tartalom nélkül). */
+async function withFallback<T>(claude: () => Promise<T>, gemini: () => Promise<T>, send: SendInfo): Promise<T> {
   if (!aiAvailable()) throw new AiError(MISSING_KEY);
   if (!claudeAvailable()) {
+    await recordExternalSend(GEMINI_NAME, send.purpose, send.chars);
     try {
       return await gemini();
     } catch (error) {
       explain(error);
     }
   }
+  await recordExternalSend("Anthropic Claude", send.purpose, send.chars);
   try {
     return await claude();
   } catch (error) {
     if (!shouldFallBack()) explain(error);
     console.warn("[ai] Claude-hiba, Gemini-tartalék:", (error as Error)?.message);
+    await recordExternalSend(`${GEMINI_NAME} (tartalék)`, send.purpose, send.chars);
     try {
       return await gemini();
     } catch {
@@ -111,6 +119,9 @@ function toClaudeContent(content: string | GeminiPart[]): string | BetaContentBl
   });
 }
 
+const sizeOf = (content: string | GeminiPart[]) =>
+  typeof content === "string" ? content.length : content.reduce((sum, part) => sum + ("text" in part ? part.text.length : Math.round((part.inlineData.data.length * 3) / 4)), 0);
+
 /** Szabad szöveges válasz (fordítás, javaslatvázlat). */
 export async function aiText({ system, content, tier = "smart", maxTokens = 8000 }: { system: string; content: string; tier?: AiTier; maxTokens?: number }) {
   return withFallback(
@@ -133,6 +144,7 @@ export async function aiText({ system, content, tier = "smart", maxTokens = 8000
         maxTokens,
         timeoutMs: AI_TIMEOUT_MS,
       }),
+    { purpose: "szöveges feladat", chars: system.length + content.length },
   );
 }
 
@@ -185,6 +197,7 @@ export async function aiJson<T extends z.ZodType>({
       if (!parsed.success) throw new AiError("Az AI-válasz nem volt értelmezhető.");
       return parsed.data;
     },
+    { purpose: "adatkinyerés / ellenőrzés", chars: system.length + sizeOf(content) },
   );
 }
 
@@ -217,6 +230,7 @@ export async function aiChat({ system, turns, maxTokens = 900 }: { system: strin
         maxTokens,
         timeoutMs: 45_000,
       }),
+    { purpose: "csevegés", chars: system.length + turns.reduce((sum, turn) => sum + turn.content.length, 0) },
   );
   return { reply };
 }
@@ -247,6 +261,7 @@ export async function aiTranscribe({ data, mimeType, fileName }: { data: Buffer;
         }),
       ),
     () => geminiGenerate({ model: GEMINI_SMART, system: OCR_SYSTEM, turns: [{ role: "user", parts }], maxTokens: 32_000, timeoutMs: AI_TIMEOUT_MS }),
+    { purpose: `szövegfelismerés (${fileName.slice(0, 80)})`, chars: data.length },
   );
   return text.replace(/^```[a-z]*\n?|\n?```$/g, "").trim();
 }

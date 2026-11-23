@@ -11,7 +11,7 @@ const SHOW_UNTIL = new Date("2026-11-26T23:59:59+01:00");
 const STORAGE_KEY = `pg-whats-new:${RELEASE}`;
 
 const ITEMS: { icon: LucideIcon; title: string; text: string }[] = [
-  { icon: Languages, title: "Profi fordítás DeepL-lel", text: "Pontosabb, természetesebb szöveg 7 nyelven, a formázás megtartásával." },
+  { icon: Languages, title: "Profi fordítás 7 nyelven", text: "Pontosabb, természetesebb szöveg, a formázás megtartásával – a szakszavak ellenőrzésével." },
   { icon: WandSparkles, title: "Bizonytalan szakszavak jelölése", text: "A kétes kifejezések kiemelve, alternatívákkal – egy kattintással cserélhetők." },
   { icon: BookMarked, title: "Saját szótár", text: "A javított szakszót megjegyzi, és a következő fordításokban már magától azt használja." },
   { icon: MessagesSquare, title: "Kérdezz a fordításról", text: "Összefoglaló, magyarázat, közérthetőbb átírás vagy ellenőrzés – közvetlenül a fordítás mellett." },

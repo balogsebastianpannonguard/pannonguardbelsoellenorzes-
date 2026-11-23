@@ -1,4 +1,5 @@
 import { ObjectId } from "mongodb";
+import { recordActivity } from "@/lib/activity";
 import { library, libraryBlobs } from "@/lib/library";
 import { mergeDocuments } from "@/lib/pdf-merge";
 import { requireUser } from "@/lib/session";
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
   if (!items.length) return new Response("A kijelölt dokumentumok nem találhatók.", { status: 404 });
 
   const pdf = await mergeDocuments(items);
+  await recordActivity("doc.merge", { target: { type: "dokumentumok", name: items.map((item) => item.doc.name).join(", ") }, detail: { darab: items.length } });
   const stamp = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Budapest" });
   return new Response(new Uint8Array(pdf), {
     headers: {

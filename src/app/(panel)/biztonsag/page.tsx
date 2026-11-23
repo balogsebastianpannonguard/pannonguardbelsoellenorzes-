@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import {
   CircleAlert,
@@ -8,6 +9,7 @@ import {
   LogOut,
   MonitorSmartphone,
   ShieldCheck,
+  ScrollText,
   ShieldX,
   UserRoundPlus,
   type LucideIcon,
@@ -60,7 +62,7 @@ export default function SecurityPage() {
   return (
     <div className="space-y-8">
       <PageTitle eyebrow="Biztonság" title="A fiókod" accent="védelme.">
-        Itt látod a fiókod adatait, a kétlépcsős azonosítás állapotát és a legutóbbi belépéseket.
+        Itt látod a fiókod adatait, a kétlépcsős azonosítás állapotát, a legutóbbi belépéseket és a teljes tevékenységnaplót.
       </PageTitle>
       <Suspense fallback={<div className="pg-skeleton h-[32rem] rounded-3xl" />}>
         <Security />
@@ -130,7 +132,12 @@ async function Security() {
       </div>
 
       <section className="pg-panel rounded-3xl p-5 sm:p-6">
-        <h2 className="font-display text-lg font-semibold">Legutóbbi események</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-display text-lg font-semibold">Legutóbbi belépési események</h2>
+          <Link href="/biztonsag/naplo" className="inline-flex items-center gap-1.5 rounded-xl border border-mint/30 px-3 py-1.5 text-sm font-semibold text-mint transition hover:bg-mint/10">
+            <ScrollText size={15} aria-hidden /> Teljes tevékenységnapló
+          </Link>
+        </div>
         {events.length === 0 ? (
           <p className="mt-4 text-sm text-white/55">Még nincs rögzített esemény.</p>
         ) : (

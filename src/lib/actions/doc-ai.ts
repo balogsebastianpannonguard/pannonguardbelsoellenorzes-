@@ -1,5 +1,6 @@
 "use server";
 
+import { recordActivity } from "@/lib/activity";
 import { ObjectId } from "mongodb";
 import { refresh } from "next/cache";
 import { z } from "zod";
@@ -40,6 +41,7 @@ async function createEditorDoc(title: string, html: string, userName: string, ex
   const now = new Date();
   const _id = new ObjectId();
   await (await editorDocs()).insertOne({ _id, title: title.slice(0, 160), html, ...extra, createdAt: now, updatedAt: now, createdBy: userName });
+  await recordActivity("editor.create", { target: { type: "szerkesztett dokumentum", id: String(_id), name: title }, ...(extra.task && { detail: { forrás: extra.task } }) });
   return String(_id);
 }
 
@@ -67,6 +69,7 @@ export async function runDocumentTask(input: { source: { type: SourceType; id: s
       maxTokens: 8000,
     });
     const label = DOC_TASKS[task].label;
+    await recordActivity("ai.task", { target: { type: ref.type === "library" ? "dokumentum" : "ellenőri fájl", id: ref.id, name: source.name }, detail: { feladat: label } });
     const id = await createEditorDoc(`${label} – ${source.name}`, markdownToHtml(markdown), user.name, { source: { type: ref.type, id: ref.id, name: source.name }, task: label });
     refresh();
     return { ok: true, id };
@@ -99,6 +102,7 @@ export async function summarizeDocuments(ids: string[]): Promise<Result> {
     const missing = docs.length - readable.length;
     const html = markdownToHtml(markdown) + (missing ? `<p><em>${missing} kijelölt dokumentumból nem volt kiolvasható szöveg, ezért kimaradt.</em></p>` : "");
     const id = await createEditorDoc(title, html, user.name, { task: "Összefoglaló" });
+    await recordActivity("ai.summary", { target: { type: "dokumentumok", name: readable.map((doc) => doc.name).join(", ") }, detail: { darab: readable.length } });
     refresh();
     return { ok: true, id };
   } catch (error) {
@@ -116,6 +120,7 @@ export async function translateSource(input: { source: { type: SourceType; id: s
   if (!source.text.trim()) return { error: "Ebből a dokumentumból nincs kiolvasott szöveg (szkennelt iratnál előbb futtasd a szövegfelismerést)." };
   try {
     const id = await runTranslation({ source: source.text, title: source.name, target: input.target, tone: input.tone, userName: user.name });
+    await recordActivity("translation.create", { target: { type: "fordítás", id, name: source.name }, detail: { célnyelv: input.target } });
     refresh();
     return { ok: true, id };
   } catch (error) {
@@ -159,7 +164,17 @@ export async function saveEditorDoc(id: string, title: string, html: string): Pr
 export async function deleteEditorDoc(id: string): Promise<Result> {
   await requireUser();
   if (!ObjectId.isValid(id)) return { error: "Ismeretlen dokumentum." };
-  await (await editorDocs()).deleteOne({ _id: new ObjectId(id) });
+  const doc = await (await editorDocs()).findOne({ _id: new ObjectId(id) }, { projection: { title: 1 } });
+  const result = await (await editorDocs()).deleteOne({ _id: new ObjectId(id) });
+  if (result.deletedCount) await recordActivity("editor.delete", { target: { type: "szerkesztett dokumentum", id, name: doc?.title } });
   refresh();
   return { ok: true };
+}
+
+/** Nyomtatás/PDF, Word-letöltés vagy másolás a szerkesztőből – csak naplózás. */
+export async function logEditorExport(id: string, format: "nyomtatás/PDF" | "Word" | "vágólap") {
+  await requireUser();
+  if (!ObjectId.isValid(id)) return;
+  const doc = await (await editorDocs()).findOne({ _id: new ObjectId(id) }, { projection: { title: 1 } });
+  if (doc) await recordActivity("editor.export", { target: { type: "szerkesztett dokumentum", id, name: doc.title }, detail: { formátum: format } });
 }

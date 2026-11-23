@@ -1,5 +1,6 @@
 "use server";
 
+import { recordActivity } from "@/lib/activity";
 import { Binary, ObjectId } from "mongodb";
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
@@ -62,6 +63,7 @@ export async function uploadLibraryFiles(_previous: FormState, formData: FormDat
       await (await libraryBlobs()).insertOne({ _id, data: new Binary(buffer), contentType: type.contentType });
       await (await library()).insertOne(doc);
       saved.push(String(_id));
+      await recordActivity("doc.upload", { target: { type: "dokumentum", id: String(_id), name }, detail: { méret: file.size, ...(ocr?.text && { szövegfelismerés: "igen" }) } });
     } catch (error) {
       console.error("Dokumentum feldolgozási hiba:", (error as Error).name);
       problems.push(`${name}: nem olvasható (sérült vagy jelszóval védett?)`);
@@ -81,8 +83,12 @@ export async function deleteLibraryFile(id: string) {
   await requireUser();
   if (!ObjectId.isValid(id)) return;
   const _id = new ObjectId(id);
+  const doc = await (await library()).findOne({ _id }, { projection: { name: 1 } });
   const result = await (await library()).deleteOne({ _id });
-  if (result.deletedCount) await (await libraryBlobs()).deleteOne({ _id });
+  if (result.deletedCount) {
+    await (await libraryBlobs()).deleteOne({ _id });
+    await recordActivity("doc.delete", { target: { type: "dokumentum", id, name: doc?.name } });
+  }
   refresh();
   redirect("/dokumentumok");
 }
@@ -100,6 +106,7 @@ export async function recognizeLibraryFile(id: string): Promise<FormState> {
   if (!result.text) return { error: result.notice ?? "A dokumentumban nem található szöveg." };
   const text = result.text.slice(0, MAX_LIBRARY_TEXT);
   await (await library()).updateOne({ _id }, { $set: { text, snippet: snippetOf(text), ocr: true }, $unset: { notice: "" } });
+  await recordActivity("doc.ocr", { target: { type: "dokumentum", id, name: doc.name } });
   refresh();
   return { ok: true, message: "A szöveg felismerve." };
 }

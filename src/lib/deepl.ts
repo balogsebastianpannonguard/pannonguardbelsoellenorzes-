@@ -1,4 +1,5 @@
 import "server-only";
+import { recordExternalSend } from "@/lib/activity";
 
 /**
  * DeepL API (REST v2): a fordítást a DeepL végzi, az ellenőrzést, a szakszavak jelölését és a csevegést a Claude.
@@ -14,8 +15,14 @@ export class DeeplError extends Error {
   }
 }
 
+/**
+ * A DeepL ingyenes (API Free, „:fx” végű) kulcsa a DeepL feltételei szerint a szöveget korlátlan ideig tárolhatja, és
+ * személyes adat nem küldhető vele – ezért belső iratokhoz nem használjuk; ilyenkor a Claude fordít. Csak a
+ * fizetős (API Pro) kulcs kapcsolja be a DeepL-t. (Kifejezett döntéssel a DEEPL_ALLOW_FREE=1 felülírja.)
+ */
 export function deeplAvailable() {
-  return Boolean(process.env.DEEPL_API_KEY);
+  const key = process.env.DEEPL_API_KEY;
+  return Boolean(key) && (!key!.endsWith(":fx") || process.env.DEEPL_ALLOW_FREE === "1");
 }
 
 const base = () => (process.env.DEEPL_API_KEY?.endsWith(":fx") ? "https://api-free.deepl.com" : "https://api.deepl.com");
@@ -102,6 +109,8 @@ export async function deeplTranslate({
 }) {
   const targetLang = TARGET[target];
   if (!targetLang) throw new DeeplError("Ezt a célnyelvet a DeepL nem támogatja.");
+  if (!deeplAvailable()) throw new DeeplError("A DeepL nincs engedélyezve.");
+  await recordExternalSend("DeepL", "fordítás", texts.reduce((sum, text) => sum + text.length, 0));
 
   const body = (extra: Record<string, unknown>) => ({
     text: texts,

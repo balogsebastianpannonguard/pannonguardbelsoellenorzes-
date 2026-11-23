@@ -1,4 +1,5 @@
 import { ObjectId } from "mongodb";
+import { recordActivity } from "@/lib/activity";
 import { library, libraryBlobs } from "@/lib/library";
 import { requireUser } from "@/lib/session";
 
@@ -15,6 +16,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!doc || !blob) return new Response("Nem található.", { status: 404 });
 
   const download = new URL(request.url).searchParams.has("letoltes");
+  if (download) await recordActivity("doc.download", { target: { type: "dokumentum", id, name: doc.name } });
   const viewable = blob.contentType === "application/pdf" || blob.contentType.startsWith("image/") || blob.contentType.startsWith("text/plain");
   const asciiName = doc.name.replace(/[^\x20-\x7e]+/g, "_").replace(/["\\]/g, "_");
   return new Response(new Uint8Array(blob.data.buffer), {

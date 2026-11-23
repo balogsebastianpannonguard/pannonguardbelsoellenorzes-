@@ -95,8 +95,8 @@ export function TranslateForm({ aiOn, deeplOn }: { aiOn: boolean; deeplOn: boole
 
       <p className="text-xs text-white/45">
         {deeplOn
-          ? "A szöveget a DeepL fordítja, a szakszavak ellenőrzéséhez pedig az Anthropic Claude-hoz kerül."
-          : "A szöveg a fordításhoz az AI-szolgáltatóhoz (Anthropic Claude) kerül feldolgozásra."}
+          ? "A szöveget a DeepL (Pro) fordítja, a szakszavak ellenőrzéséhez pedig az Anthropic Claude-hoz kerül. Egyik szolgáltató sem tanít rajta modellt; az átadás a tevékenységnaplóba kerül."
+          : "A szöveg a fordításhoz az Anthropic Claude-hoz kerül. A szolgáltató nem tanít rajta modellt, és 30 napon belül törli; az átadás a tevékenységnaplóba kerül."}
       </p>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Letterhead, LETTERHEAD_HTML } from "@/components/letterhead";
 import { buttonClass } from "@/components/ui";
-import { deleteEditorDoc, saveEditorDoc } from "@/lib/actions/doc-ai";
+import { deleteEditorDoc, logEditorExport, saveEditorDoc } from "@/lib/actions/doc-ai";
 
 /** Eszköztár-gomb: execCommand-parancs (a „block” a formatBlock-ot jelenti), és mikor számít aktívnak. */
 type Tool = { icon: LucideIcon; label: string; command: string; value?: string; active?: string };
@@ -88,6 +88,13 @@ export function PgEditor({ id, title: initialTitle, html, updatedAt }: { id: str
     return () => window.removeEventListener("beforeunload", warn);
   }, [status.state]);
 
+  // A nyomtatás (gombbal vagy Ctrl+P-vel) is a naplóba kerül.
+  useEffect(() => {
+    const logPrint = () => void logEditorExport(id, "nyomtatás/PDF");
+    window.addEventListener("beforeprint", logPrint);
+    return () => window.removeEventListener("beforeprint", logPrint);
+  }, [id]);
+
   useEffect(() => {
     const update = () => {
       if (!bodyRef.current?.contains(document.getSelection()?.anchorNode ?? null)) return;
@@ -114,6 +121,7 @@ export function PgEditor({ id, title: initialTitle, html, updatedAt }: { id: str
   const fileName = (title.trim() || "dokumentum").replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").slice(0, 60) || "dokumentum";
 
   function downloadWord() {
+    void logEditorExport(id, "Word");
     const body = bodyRef.current?.innerHTML ?? "";
     const doc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>${title.replace(/</g, "&lt;")}</title>
 <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
@@ -130,6 +138,7 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #9aa0aa;padding
   }
 
   async function copyAll() {
+    void logEditorExport(id, "vágólap");
     const html = `<h1>${title.replace(/</g, "&lt;")}</h1>${bodyRef.current?.innerHTML ?? ""}`;
     const text = `${title}\n\n${bodyRef.current?.innerText ?? ""}`;
     try {
@@ -175,7 +184,11 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #9aa0aa;padding
           <button type="button" onClick={save} className={buttonClass("secondary", "sm")}>
             <CloudUpload size={15} aria-hidden /> Mentés
           </button>
-          <button type="button" onClick={() => window.print()} className={buttonClass("primary", "sm")}>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className={buttonClass("primary", "sm")}
+          >
             <Printer size={15} aria-hidden /> Nyomtatás / PDF
           </button>
           <button type="button" onClick={downloadWord} className={buttonClass("secondary", "sm")}>
