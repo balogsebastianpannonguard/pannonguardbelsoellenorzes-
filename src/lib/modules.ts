@@ -1,4 +1,5 @@
 import {
+  FilePenLine,
   ChartColumn,
   ClipboardList,
   Files,
@@ -133,6 +134,21 @@ export const MODULES: Module[] = [
       "Előnézet a böngészőben, letöltés nélkül",
       "A dokumentum szövege kiolvasva és másolható – szkennelt iratból is",
       "Keresés a dokumentumok nevében és szövegében",
+      "AI-elemzés, összefoglaló és fordítás minden dokumentumhoz; több dokumentum egy PDF-be fűzve",
+    ],
+  },
+  {
+    slug: "szerkeszto",
+    number: "09",
+    title: "PannonGuard szerkesztő",
+    label: "Szerkesztő",
+    icon: FilePenLine,
+    summary: "Hivatalos, fejléces dokumentumok szerkesztése: AI-elemzések, összefoglalók, átírt iratok.",
+    goals: [
+      "A Pannon Guard hivatalos fejléce minden dokumentumon",
+      "Formázás: címsorok, listák, kiemelés, igazítás",
+      "Automatikus mentés, nyomtatás, PDF és Word",
+      "Az AI-eredmények és a feltöltött iratok szerkeszthető változata",
     ],
   },
 ];

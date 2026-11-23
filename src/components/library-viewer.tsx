@@ -10,7 +10,7 @@ type View = "preview" | "text" | "both";
 
 /** Előnézet + kinyert szöveg, fülekkel (széles képernyőn egymás mellett is). */
 export function LibraryViewer({ name, kind, text, html, rawUrl }: { name: string; kind: LibraryKind; text: string; html?: string; rawUrl: string }) {
-  const [view, setView] = useState<View>("preview");
+  const [view, setView] = useState<View>("both");
   const [copied, setCopied] = useState(false);
 
   const preview =
@@ -66,7 +66,7 @@ export function LibraryViewer({ name, kind, text, html, rawUrl }: { name: string
   const tabs: { id: View; label: string; icon: typeof Eye; wide?: boolean }[] = [
     { id: "preview", label: "Előnézet", icon: Eye },
     { id: "text", label: "Szöveg", icon: FileText },
-    { id: "both", label: "Egymás mellett", icon: Columns2, wide: true },
+    { id: "both", label: "Egymás mellett", icon: Columns2 },
   ];
 
   return (

@@ -380,3 +380,36 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .pg-wn-fade, .pg-wn-pop, .pg-wn-item, .pg-wn-spark, .pg-wn-float, .pg-wn-ring { animation: none; }
 }
+
+/* PannonGuard szerkesztő – a lap tartalma */
+.pg-editor-body {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: #14182b;
+}
+.pg-editor-body > * + * { margin-top: 0.75em; }
+.pg-editor-body h1, .pg-editor-body h2, .pg-editor-body h3, .pg-editor-body h4 {
+  font-family: var(--font-display), Arial, sans-serif;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 1.3em;
+}
+.pg-editor-body h1 { font-size: 1.5rem; }
+.pg-editor-body h2 { font-size: 1.2rem; padding-bottom: 0.2em; border-bottom: 1px solid #e3e6ea; }
+.pg-editor-body h3 { font-size: 1.05rem; }
+.pg-editor-body ul { list-style: disc; padding-left: 1.5em; }
+.pg-editor-body ol { list-style: decimal; padding-left: 1.5em; }
+.pg-editor-body li + li { margin-top: 0.25em; }
+.pg-editor-body blockquote { border-left: 3px solid var(--color-mint); padding-left: 1em; color: #4a5060; font-style: italic; }
+.pg-editor-body table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.pg-editor-body th, .pg-editor-body td { border: 1px solid #c9ccd4; padding: 0.4em 0.6em; vertical-align: top; text-align: left; }
+.pg-editor-body th { background: #eef0f3; font-weight: 700; }
+.pg-editor-body a { color: #0f766e; text-decoration: underline; }
+.pg-editor-body hr { border: 0; border-top: 1px solid #c9ccd4; }
+.pg-editor-body code { font-family: ui-monospace, monospace; font-size: 0.9em; background: #f1f3f5; padding: 0.1em 0.3em; border-radius: 3px; }
+@media print {
+  .pg-editor-page { color: #000; }
+  .pg-editor-body h2, .pg-editor-body h3 { break-after: avoid; }
+  .pg-editor-body tr { break-inside: avoid; }
+}

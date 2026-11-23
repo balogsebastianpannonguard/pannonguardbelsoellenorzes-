@@ -2,26 +2,58 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowLeft, CircleAlert, Download, ExternalLink, FileSearch, Info, ScanText, TriangleAlert } from "lucide-react";
+import {
+  ArrowLeft,
+  CircleAlert,
+  Download,
+  ExternalLink,
+  FileSearch,
+  Info,
+  ScanText,
+  TriangleAlert,
+} from "lucide-react";
+import { DocAiPanel } from "@/components/doc-ai-panel";
 import { OcrButton } from "@/components/ocr-button";
 import { PageTitle } from "@/components/page-title";
 import { Panel, Pill, Skeleton, buttonClass } from "@/components/ui";
 import { aiAvailable } from "@/lib/ai";
-import { auditFileBlobs, auditFiles, audits, isImageFile, previewKind, type IssueLevel } from "@/lib/audits";
+import {
+  auditFileBlobs,
+  auditFiles,
+  audits,
+  isImageFile,
+  previewKind,
+  type IssueLevel,
+} from "@/lib/audits";
 import { formatStamp } from "@/lib/dates";
 import { requireUser, toObjectId } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Fájl előnézete" };
+export const maxDuration = 120;
 
 const LEVEL = {
   error: { icon: CircleAlert, label: "Hiba", text: "text-red-300" },
-  warning: { icon: TriangleAlert, label: "Figyelmeztetés", text: "text-amber-300" },
+  warning: {
+    icon: TriangleAlert,
+    label: "Figyelmeztetés",
+    text: "text-amber-300",
+  },
   info: { icon: Info, label: "Tájékoztatás", text: "text-white/45" },
-} as const satisfies Record<IssueLevel, { icon: unknown; label: string; text: string }>;
+} as const satisfies Record<
+  IssueLevel,
+  { icon: unknown; label: string; text: string }
+>;
 
-const size = (bytes: number) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
+const size = (bytes: number) =>
+  bytes >= 1024 * 1024
+    ? `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
-export default function FilePreviewPage({ params }: { params: Promise<{ id: string; fileId: string }> }) {
+export default function FilePreviewPage({
+  params,
+}: {
+  params: Promise<{ id: string; fileId: string }>;
+}) {
   return (
     <div className="space-y-8">
       <Suspense fallback={<Skeleton className="h-[40rem]" />}>
@@ -41,7 +73,10 @@ function TablePreview({ text }: { text: string }) {
         <thead className="sticky top-0 bg-ink-900">
           <tr>
             {head.map((cell, index) => (
-              <th key={index} className="border-b border-white/10 px-3 py-2 font-semibold whitespace-nowrap text-white/80">
+              <th
+                key={index}
+                className="border-b border-white/10 px-3 py-2 font-semibold whitespace-nowrap text-white/80"
+              >
                 {cell}
               </th>
             ))}
@@ -51,7 +86,10 @@ function TablePreview({ text }: { text: string }) {
           {rows.map((row, index) => (
             <tr key={index} className="odd:bg-white/2">
               {head.map((_, cellIndex) => (
-                <td key={cellIndex} className="border-b border-white/5 px-3 py-1.5 whitespace-nowrap text-white/70">
+                <td
+                  key={cellIndex}
+                  className="border-b border-white/5 px-3 py-1.5 whitespace-nowrap text-white/70"
+                >
                   {row[cellIndex] ?? ""}
                 </td>
               ))}
@@ -63,7 +101,11 @@ function TablePreview({ text }: { text: string }) {
   );
 }
 
-async function Preview({ params }: { params: Promise<{ id: string; fileId: string }> }) {
+async function Preview({
+  params,
+}: {
+  params: Promise<{ id: string; fileId: string }>;
+}) {
   await requireUser();
   const { id, fileId } = await params;
   const auditId = toObjectId(id);
@@ -72,7 +114,10 @@ async function Preview({ params }: { params: Promise<{ id: string; fileId: strin
   const [audit, file, blob] = await Promise.all([
     (await audits()).findOne({ _id: auditId }, { projection: { name: 1 } }),
     (await auditFiles()).findOne({ _id, auditId }),
-    (await auditFileBlobs()).findOne({ _id }, { projection: { contentType: 1 } }),
+    (await auditFileBlobs()).findOne(
+      { _id },
+      { projection: { contentType: 1 } },
+    ),
   ]);
   if (!audit || !file) notFound();
 
@@ -84,22 +129,35 @@ async function Preview({ params }: { params: Promise<{ id: string; fileId: strin
 
   return (
     <>
-      <Link href={`/ellenori-adatok/${id}`} className="inline-flex items-center gap-1.5 text-sm text-white/55 hover:text-white">
+      <Link
+        href={`/ellenori-adatok/${id}`}
+        className="inline-flex items-center gap-1.5 text-sm text-white/55 hover:text-white"
+      >
         <ArrowLeft size={15} aria-hidden /> {audit.name}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <PageTitle eyebrow="04 · Ellenőri adatok · Fájl" title={file.name}>
-          {size(file.size)} · feltöltve: {formatStamp(file.uploadedAt)} · {file.uploadedBy}
+          {size(file.size)} · feltöltve: {formatStamp(file.uploadedAt)} ·{" "}
+          {file.uploadedBy}
           {file.ocr ? " · szövegfelismeréssel olvasva" : ""}
         </PageTitle>
         {blob && (
           <div className="flex flex-wrap gap-2">
-            <a href={`${raw}?letoltes=1`} download={file.name} className={buttonClass("primary")}>
+            <a
+              href={`${raw}?letoltes=1`}
+              download={file.name}
+              className={buttonClass("primary")}
+            >
               <Download size={17} aria-hidden /> Letöltés
             </a>
             {kind && (
-              <a href={raw} target="_blank" rel="noopener" className={buttonClass("secondary")}>
+              <a
+                href={raw}
+                target="_blank"
+                rel="noopener"
+                className={buttonClass("secondary")}
+              >
                 <ExternalLink size={17} aria-hidden /> Megnyitás új lapon
               </a>
             )}
@@ -114,8 +172,18 @@ async function Preview({ params }: { params: Promise<{ id: string; fileId: strin
             const Icon = level.icon;
             return (
               <li key={index} className="flex items-start gap-2.5 text-sm">
-                <Icon size={16} aria-label={level.label} className={`mt-0.5 shrink-0 ${level.text}`} />
-                <span className={issue.level === "info" ? "text-white/60" : "text-white/85"}>{issue.message}</span>
+                <Icon
+                  size={16}
+                  aria-label={level.label}
+                  className={`mt-0.5 shrink-0 ${level.text}`}
+                />
+                <span
+                  className={
+                    issue.level === "info" ? "text-white/60" : "text-white/85"
+                  }
+                >
+                  {issue.message}
+                </span>
               </li>
             );
           })}
@@ -124,13 +192,18 @@ async function Preview({ params }: { params: Promise<{ id: string; fileId: strin
 
       {!blob && (
         <p className="rounded-2xl border border-amber-300/25 bg-amber-300/8 p-4 text-sm text-amber-100">
-          Ennek a fájlnak az eredetije nincs meg: még azelőtt töltötték fel, hogy a rendszer az eredeti fájlokat is megőrizte volna.
-          Töltsd fel újra az ellenőrzés oldalán, és utána megtekinthető, letölthető, a szkennelt PDF szövege pedig automatikusan felismerődik.
+          Ennek a fájlnak az eredetije nincs meg: még azelőtt töltötték fel,
+          hogy a rendszer az eredeti fájlokat is megőrizte volna. Töltsd fel
+          újra az ellenőrzés oldalán, és utána megtekinthető, letölthető, a
+          szkennelt PDF szövege pedig automatikusan felismerődik.
         </p>
       )}
 
       {blob && scannable && (ocrMissing || file.ocr) && (
-        <Panel title={ocrMissing ? "Szkennelt irat" : "Szövegfelismerés"} icon={ScanText}>
+        <Panel
+          title={ocrMissing ? "Szkennelt irat" : "Szövegfelismerés"}
+          icon={ScanText}
+        >
           <p className="mb-4 text-sm text-white/60">
             {ocrMissing
               ? "A fájlban nincs kinyerhető szöveg, mert szkennelt (képes). Az AI felismeri és átírja a szövegét, utána a megállapítások feltárása is működik rajta."
@@ -140,29 +213,66 @@ async function Preview({ params }: { params: Promise<{ id: string; fileId: strin
         </Panel>
       )}
 
-      {blob && kind === "pdf" && (
-        <iframe src={raw} title={`${file.name} előnézete`} className="h-[80vh] w-full rounded-3xl border border-white/10 bg-white" />
-      )}
-      {blob && kind === "image" && (
-        // eslint-disable-next-line @next/next/no-img-element -- a saját, hitelesített végpontról érkező kép, optimalizálás nélkül
-        <img src={raw} alt={file.name} className="mx-auto max-h-[80vh] rounded-3xl border border-white/10 bg-white object-contain" />
-      )}
+      <div
+        className={
+          blob && kind && file.text.trim() && file.kind !== "table"
+            ? "grid items-start gap-4 lg:grid-cols-2"
+            : "space-y-8"
+        }
+      >
+        {blob && kind === "pdf" && (
+          <iframe
+            src={raw}
+            title={`${file.name} előnézete`}
+            className="h-[80vh] w-full rounded-3xl border border-white/10 bg-white"
+          />
+        )}
+        {blob && kind === "image" && (
+          // eslint-disable-next-line @next/next/no-img-element -- a saját, hitelesített végpontról érkező kép, optimalizálás nélkül
+          <img
+            src={raw}
+            alt={file.name}
+            className="mx-auto max-h-[80vh] rounded-3xl border border-white/10 bg-white object-contain"
+          />
+        )}
 
-      {file.text.trim() && (
-        <Panel title={file.kind === "table" ? "Táblázat (az első 300 sor)" : kind === "pdf" || kind === "image" ? "Kinyert szöveg" : "A fájl szövege"} icon={FileSearch}>
-          {file.kind === "table" ? (
-            <TablePreview text={file.text} />
-          ) : (
-            <div className="max-h-[70vh] overflow-y-auto rounded-2xl border border-white/8 bg-ink-950/50 p-5 text-sm leading-relaxed whitespace-pre-wrap text-white/80 [overflow-wrap:anywhere] [scrollbar-width:thin]">
-              {file.text}
-            </div>
-          )}
-        </Panel>
-      )}
+        {file.text.trim() && (
+          <Panel
+            title={
+              file.kind === "table"
+                ? "Táblázat (az első 300 sor)"
+                : kind === "pdf" || kind === "image"
+                  ? "Kinyert szöveg"
+                  : "A fájl szövege"
+            }
+            icon={FileSearch}
+          >
+            {file.kind === "table" ? (
+              <TablePreview text={file.text} />
+            ) : (
+              <div className="max-h-[70vh] overflow-y-auto rounded-2xl border border-white/8 bg-ink-950/50 p-5 text-sm leading-relaxed whitespace-pre-wrap text-white/80 [overflow-wrap:anywhere] [scrollbar-width:thin]">
+                {file.text}
+              </div>
+            )}
+          </Panel>
+        )}
+      </div>
+      <DocAiPanel
+        source={{ type: "audit", id: fileId }}
+        aiOn={aiOn}
+        hasText={Boolean(file.text.trim())}
+      />
       {!file.text.trim() && blob && !kind && (
-        <p className="text-sm text-white/55">Ehhez a fájltípushoz nincs előnézet, de a Letöltés gombbal megnyitható.</p>
+        <p className="text-sm text-white/55">
+          Ehhez a fájltípushoz nincs előnézet, de a Letöltés gombbal
+          megnyitható.
+        </p>
       )}
-      {file.text.trim() && <Pill tone="muted">{file.text.length.toLocaleString("hu-HU")} karakter</Pill>}
+      {file.text.trim() && (
+        <Pill tone="muted">
+          {file.text.length.toLocaleString("hu-HU")} karakter
+        </Pill>
+      )}
     </>
   );
 }

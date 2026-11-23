@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Files, Search, ScanText, UploadCloud } from "lucide-react";
+import { Files, Search, UploadCloud } from "lucide-react";
 import { KIND_LABEL } from "@/components/library-kinds";
+import { LibraryGrid } from "@/components/library-grid";
 import { LibraryUpload } from "@/components/library-upload";
+import { aiAvailable } from "@/lib/ai";
 import { PageTitle } from "@/components/page-title";
-import { Empty, Input, Panel, Pill, Skeleton, buttonClass } from "@/components/ui";
+import { Empty, Input, Panel, Skeleton, buttonClass } from "@/components/ui";
 import { formatStamp } from "@/lib/dates";
 import { LIBRARY_ACCEPT, library, sizeLabel } from "@/lib/library";
 import { requireUser } from "@/lib/session";
@@ -18,8 +20,8 @@ export default function LibraryPage({ searchParams }: { searchParams: Promise<{ 
   return (
     <div className="space-y-8">
       <PageTitle eyebrow="08 · Belső ellenőrzés" title="Feltöltött" accent="dokumentumok.">
-        Tölts fel PDF-et, Word-dokumentumot, szöveges fájlt vagy fényképet: a rendszer előnézetet készít, és a szövegét is
-        kiolvassa – szkennelt iratból is –, így kereshető és másolható.
+        Tölts fel PDF-et, Word-dokumentumot, szöveges fájlt vagy fényképet: a rendszer előnézetet készít, kiolvassa a szövegét (szkennelt iratból is), és bármelyikről kérhetsz
+        elemzést, összefoglalót vagy fordítást. Több dokumentum egy PDF-be is fűzhető.
       </PageTitle>
       <Panel title="Feltöltés" icon={UploadCloud}>
         <LibraryUpload accept={LIBRARY_ACCEPT} />
@@ -57,39 +59,19 @@ async function List({ searchParams }: { searchParams: Promise<{ q?: string }> })
           <Empty icon={Files} title="Még nincs feltöltött dokumentum" text="A fenti mezőbe húzva vagy tallózva tölthetsz fel." />
         )
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {docs.map((doc) => {
-            const kind = KIND_LABEL[doc.kind];
-            return (
-              <li key={String(doc._id)}>
-                <Link
-                  href={`/dokumentumok/${doc._id}`}
-                  className="pg-card group flex h-full flex-col gap-3 rounded-2xl border border-white/8 bg-white/3 p-4 transition hover:bg-white/5"
-                >
-                  <div className="flex items-start gap-3">
-                    <span className={`grid size-11 shrink-0 place-items-center rounded-xl ring-1 ${kind.tone}`}>
-                      <kind.icon size={20} aria-hidden />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium group-hover:text-mint" title={doc.name}>{doc.name}</p>
-                      <p className="text-xs text-white/45">
-                        {kind.label} · {sizeLabel(doc.size)}
-                        {doc.pages ? ` · ${doc.pages} oldal` : ""}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="line-clamp-3 flex-1 text-xs leading-relaxed text-white/55">
-                    {doc.snippet || <span className="italic text-white/35">{doc.notice ?? "Nincs kinyert szöveg."}</span>}
-                  </p>
-                  <div className="flex items-center justify-between gap-2 text-xs text-white/40">
-                    <span className="truncate">{formatStamp(doc.uploadedAt)} · {doc.uploadedBy}</span>
-                    {doc.ocr && <Pill tone="info" icon={ScanText}>OCR</Pill>}
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <LibraryGrid
+          aiOn={aiAvailable()}
+          docs={docs.map((doc) => ({
+            id: String(doc._id),
+            name: doc.name,
+            kind: doc.kind,
+            meta: `${KIND_LABEL[doc.kind].label} · ${sizeLabel(doc.size)}${doc.pages ? ` · ${doc.pages} oldal` : ""}`,
+            snippet: doc.snippet,
+            notice: doc.notice,
+            stamp: `${formatStamp(doc.uploadedAt)} · ${doc.uploadedBy}`,
+            ocr: Boolean(doc.ocr),
+          }))}
+        />
       )}
     </Panel>
   );

@@ -3,7 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowLeft, Download, ExternalLink, TriangleAlert } from "lucide-react";
+import { DocAiPanel } from "@/components/doc-ai-panel";
 import { LibraryActions, LibraryViewer } from "@/components/library-viewer";
+import { aiAvailable } from "@/lib/ai";
 import { PageTitle } from "@/components/page-title";
 import { Skeleton, buttonClass } from "@/components/ui";
 import { formatStamp } from "@/lib/dates";
@@ -73,6 +75,7 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
       )}
 
       <LibraryViewer name={doc.name} kind={doc.kind} text={doc.text} html={html} rawUrl={raw} />
+      <DocAiPanel source={{ type: "library", id }} aiOn={aiAvailable()} hasText={Boolean(doc.text.trim())} />
       <LibraryActions id={id} canOcr={doc.kind === "pdf" || doc.kind === "image"} ocrDone={Boolean(doc.ocr)} />
     </>
   );
