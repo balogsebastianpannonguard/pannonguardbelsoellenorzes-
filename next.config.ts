@@ -33,6 +33,8 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,
+  // A PDF-összefűzéshez beágyazott betűkészlet (magyar ékezetekkel) a szerverfüggvény mellé kerüljön.
+  outputFileTracingIncludes: { "/dokumentumok/osszefuzes": ["./assets/fonts/*.ttf"] },
   experimental: { serverActions: { bodySizeLimit: "4.5mb" } },
   turbopack: {
     rules: {
@@ -46,11 +48,16 @@ const nextConfig: NextConfig = {
     return [
       {
         // Minden oldal, kivéve a fájl-előnézetet.
-        source: "/((?!ellenori-adatok/fajl/).*)",
+        source: "/((?!ellenori-adatok/fajl/|dokumentumok/fajl/).*)",
         headers: [{ key: "Content-Security-Policy", value: contentSecurityPolicy }, { key: "X-Frame-Options", value: "DENY" }, ...common],
       },
       {
         source: "/ellenori-adatok/fajl/:fileId",
+        headers: [{ key: "Content-Security-Policy", value: fileContentSecurityPolicy }, { key: "X-Frame-Options", value: "SAMEORIGIN" }, ...common],
+      },
+      {
+        // A Dokumentumok eredeti fájljai (PDF-, kép-, szöveg-előnézet) ugyanígy csak a saját oldalunkba ágyazhatók.
+        source: "/dokumentumok/fajl/:id",
         headers: [{ key: "Content-Security-Policy", value: fileContentSecurityPolicy }, { key: "X-Frame-Options", value: "SAMEORIGIN" }, ...common],
       },
     ];
