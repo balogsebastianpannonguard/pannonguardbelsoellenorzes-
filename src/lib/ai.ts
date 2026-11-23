@@ -61,11 +61,9 @@ function explain(error: unknown): never {
   throw new AiError("Az AI most nem érhető el.");
 }
 
-/** Claude-hiba után akkor próbáljuk a Geminit, ha a hiba átmeneti/szolgáltatói (nem a bemenet hibája). */
-function shouldFallBack(error: unknown) {
-  if (!geminiAvailable()) return false;
-  if (error instanceof Anthropic.BadRequestError) return false;
-  return !(error instanceof AiError) || /túl sokáig|nem érhető el|túlterhelt/.test(error.message);
+/** Bármilyen Claude-hiba (kiesés, túlterhelés, kulcs- vagy keret-probléma, értelmezhetetlen válasz) után a Gemini próbálkozik. */
+function shouldFallBack() {
+  return geminiAvailable();
 }
 
 async function withFallback<T>(claude: () => Promise<T>, gemini: () => Promise<T>): Promise<T> {
@@ -80,7 +78,7 @@ async function withFallback<T>(claude: () => Promise<T>, gemini: () => Promise<T
   try {
     return await claude();
   } catch (error) {
-    if (!shouldFallBack(error)) explain(error);
+    if (!shouldFallBack()) explain(error);
     console.warn("[ai] Claude-hiba, Gemini-tartalék:", (error as Error)?.message);
     try {
       return await gemini();

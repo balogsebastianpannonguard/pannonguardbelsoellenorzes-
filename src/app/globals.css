@@ -340,3 +340,43 @@ body {
     max-width: none !important;
   }
 }
+
+/* „Pajzs 0.1” újdonság-ablak */
+@keyframes pg-wn-fade {
+  from { opacity: 0; }
+}
+@keyframes pg-wn-pop {
+  from { opacity: 0; transform: translateY(24px) scale(0.94); }
+}
+@keyframes pg-wn-item {
+  from { opacity: 0; transform: translateY(10px); }
+}
+@keyframes pg-wn-spin {
+  to { --pg-wn-angle: 360deg; }
+}
+@keyframes pg-wn-spark {
+  0%, 100% { opacity: 0; transform: translateY(0) scale(0.6); }
+  50% { opacity: 0.9; transform: translateY(-14px) scale(1); }
+}
+@keyframes pg-wn-float {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-6px) rotate(2deg); }
+}
+@property --pg-wn-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.pg-wn-fade { animation: pg-wn-fade 0.35s ease-out both; }
+.pg-wn-pop { animation: pg-wn-pop 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.15) both; }
+.pg-wn-item { animation: pg-wn-item 0.45s ease-out both; }
+.pg-wn-spark { animation: pg-wn-spark 3.2s ease-in-out infinite; }
+.pg-wn-float { animation: pg-wn-float 4s ease-in-out infinite; }
+.pg-wn-ring {
+  background: conic-gradient(from var(--pg-wn-angle), transparent 0deg, var(--color-mint) 70deg, var(--color-violet-bright) 140deg, transparent 220deg);
+  filter: blur(6px);
+  animation: pg-wn-spin 6s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pg-wn-fade, .pg-wn-pop, .pg-wn-item, .pg-wn-spark, .pg-wn-float, .pg-wn-ring { animation: none; }
+}

@@ -8,6 +8,7 @@ import { askAssistant, assistantBriefing, assistantInsights, assistantLegalCheck
 import { submitTicket } from "@/lib/actions/tickets";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserCard, UserCardSkeleton } from "@/components/user-card";
+import { WhatsNew } from "@/components/whats-new";
 
 // Pajzs műveletei (csevegés, iratdigitalizálás, jogszabály-ellenőrzés) bármelyik oldalról indulhatnak.
 export const maxDuration = 120;
@@ -47,6 +48,7 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
         </header>
         <main className="mx-auto max-w-6xl px-5 py-8 pb-28 sm:px-8 lg:py-12 lg:pb-28">{children}</main>
       </div>
+      <WhatsNew />
       <Pajzs
         aiOn={aiAvailable()}
         api={{
