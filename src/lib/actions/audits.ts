@@ -150,7 +150,7 @@ export async function deleteAuditFile(formData: FormData) {
 /** Szkennelt PDF vagy kép szövegének felismerése; a hibát tájékoztató tételként adja vissza, nem dob. */
 async function recognize(buffer: Buffer, contentType: string, name: string) {
   if (!aiAvailable()) {
-    return { text: "", issue: { level: "warning" as const, message: "A szövegfelismeréshez (OCR) AI-kulcs kell (GEMINI_API_KEY); beállítás után a fájl oldalán újrafuttatható." } };
+    return { text: "", issue: { level: "warning" as const, message: "A szövegfelismeréshez (OCR) AI-kulcs kell (ANTHROPIC_API_KEY); beállítás után a fájl oldalán újrafuttatható." } };
   }
   try {
     return { text: await aiTranscribe({ data: buffer, mimeType: contentType, fileName: name }) };
@@ -164,7 +164,7 @@ async function recognize(buffer: Buffer, contentType: string, name: string) {
 export async function recognizeAuditFile(id: string): Promise<FormState> {
   await requireUser();
   if (!ObjectId.isValid(id)) return { error: "Ismeretlen fájl." };
-  if (!aiAvailable()) return { error: "A szövegfelismeréshez AI-kulcs kell (GEMINI_API_KEY)." };
+  if (!aiAvailable()) return { error: "A szövegfelismeréshez AI-kulcs kell (ANTHROPIC_API_KEY)." };
   const _id = new ObjectId(id);
   const [file, blob] = await Promise.all([(await auditFiles()).findOne({ _id }, { projection: { name: 1 } }), (await auditFileBlobs()).findOne({ _id })]);
   if (!file) return { error: "A fájl nem található." };

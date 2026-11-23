@@ -47,3 +47,45 @@ export function chunkText(text: string, size = 6000) {
   if (current) chunks.push(current);
   return chunks;
 }
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * A kifejezés minden előfordulását lecseréli, kis-nagybetűtől függetlenül; a nagy kezdőbetűt (mondat eleje) megtartja.
+ * Ahol a szövegben már az új alak áll (pl. a régi alak az új része), ott nem cserél, így az ismételt csere sem ront.
+ */
+export function replaceTerm(text: string, current: string, next: string) {
+  let count = 0;
+  const nextLower = next.toLowerCase();
+  const replaced = text.replace(new RegExp(escapeRegExp(current), "giu"), (match, at: number, whole: string) => {
+    if (whole.slice(at, at + next.length).toLowerCase() === nextLower) return match;
+    count++;
+    const upper = match[0] !== match[0].toLowerCase() && current[0] === current[0].toLowerCase();
+    return upper ? next[0].toUpperCase() + next.slice(1) : next;
+  });
+  return { text: replaced, count };
+}
+
+/** Szövegrész a kiemelt megjelenítéshez: sima szöveg vagy egy kifejezés (a terms tömb indexével). */
+export type Segment = { text: string; term?: number };
+
+/** A fordítást szakaszokra bontja, a kifejezéseket (leghosszabb elöl, kis-nagybetűtől függetlenül) megjelölve. */
+export function segmentTerms(text: string, targets: string[]): Segment[] {
+  const order = targets
+    .map((target, index) => ({ target: target.trim(), index }))
+    .filter((item) => item.target.length > 1)
+    .sort((a, b) => b.target.length - a.target.length);
+  if (!order.length) return [{ text }];
+  const lookup = new Map(order.map((item) => [item.target.toLowerCase(), item.index]));
+  const pattern = new RegExp(order.map((item) => escapeRegExp(item.target)).join("|"), "giu");
+  const segments: Segment[] = [];
+  let last = 0;
+  for (const match of text.matchAll(pattern)) {
+    const at = match.index ?? 0;
+    if (at > last) segments.push({ text: text.slice(last, at) });
+    segments.push({ text: match[0], term: lookup.get(match[0].toLowerCase()) });
+    last = at + match[0].length;
+  }
+  if (last < text.length) segments.push({ text: text.slice(last) });
+  return segments;
+}

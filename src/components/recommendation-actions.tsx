@@ -49,7 +49,7 @@ export function RecommendationGenerate({ findingId, findings, aiOn }: { findingI
       </div>
       {!aiOn && (
         <p className="flex gap-1.5 text-xs text-amber-200/90">
-          <KeyRound size={13} aria-hidden className="mt-0.5 shrink-0" /> Az AI-vázlathoz GEMINI_API_KEY szükséges; kézzel is írhatsz javaslatot.
+          <KeyRound size={13} aria-hidden className="mt-0.5 shrink-0" /> Az AI-vázlathoz ANTHROPIC_API_KEY szükséges; kézzel is írhatsz javaslatot.
         </p>
       )}
       {error && <p role="alert" className="text-xs text-red-300">{error}</p>}

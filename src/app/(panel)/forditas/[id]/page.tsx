@@ -2,16 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowLeft, BookText } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { PageTitle } from "@/components/page-title";
 import { TranslateDisclaimer } from "@/components/translate-disclaimer";
-import { TranslationTools } from "@/components/translate-tools";
-import { Panel, Pill, Skeleton } from "@/components/ui";
+import { TranslationWorkbench } from "@/components/translate-tools";
+import { TranslationChat } from "@/components/translate-chat";
+import { aiAvailable } from "@/lib/ai";
+import { Skeleton } from "@/components/ui";
 import { formatStamp } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
 import { getTranslation } from "@/lib/translations";
 
 export const metadata: Metadata = { title: "Fordítás" };
+export const maxDuration = 120;
 
 export default function TranslationPage({ params }: { params: Promise<{ id: string }> }) {
   return (
@@ -34,38 +37,20 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
   return (
     <div className="space-y-6">
       <PageTitle eyebrow="Fordítás" title={doc.title}>
-        {doc.sourceLanguage} → {doc.targetLanguage} · {doc.tone} hangnem · {formatStamp(doc.createdAt)} · {doc.createdBy}
+        {doc.sourceLanguage} → {doc.targetLanguage} · {doc.tone} hangnem{doc.engine && <> · {doc.engine}</>} · {formatStamp(doc.createdAt)} · {doc.createdBy}
+        {doc.editedAt && <> · kézzel javítva: {formatStamp(doc.editedAt)}</>}
       </PageTitle>
-      <TranslationTools id={String(doc._id)} title={doc.title} translated={doc.translated} />
       <TranslateDisclaimer />
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Panel title={<>Eredeti <Pill tone="muted">{doc.sourceLanguage}</Pill></>}>
-          <div className="max-h-[36rem] overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap text-white/70">{doc.original}</div>
-        </Panel>
-        <Panel title={<>Fordítás <Pill tone="ok">{doc.targetLanguage}</Pill></>}>
-          <div className="max-h-[36rem] overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap">{doc.translated}</div>
-        </Panel>
-      </div>
-
-      <Panel title="Szakkifejezések" icon={BookText}>
-        {doc.terms.length === 0 ? (
-          <p className="text-sm text-white/55">Az AI nem jelölt meg külön szakkifejezést vagy bizonytalan részletet.</p>
-        ) : (
-          <>
-            <p className="mb-3 text-xs text-white/45">A szakszavak és a bizonytalan fordítású részletek; ellenőrizd őket a végleges felhasználás előtt.</p>
-            <ul className="grid gap-2 sm:grid-cols-2">
-              {doc.terms.map((term) => (
-                <li key={term.source} className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/3 px-3 py-2 text-sm">
-                  <span className="min-w-0 flex-1 truncate text-white/70">{term.source}</span>
-                  <span aria-hidden className="text-mint">→</span>
-                  <span className="min-w-0 flex-1 truncate font-medium">{term.target}</span>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </Panel>
+      <TranslationWorkbench
+        id={String(doc._id)}
+        title={doc.title}
+        original={doc.original}
+        sourceLanguage={doc.sourceLanguage}
+        targetLanguage={doc.targetLanguage}
+        translated={doc.translated}
+        terms={JSON.parse(JSON.stringify(doc.terms ?? []))}
+      />
+      <TranslationChat id={String(doc._id)} aiOn={aiAvailable()} />
     </div>
   );
 }

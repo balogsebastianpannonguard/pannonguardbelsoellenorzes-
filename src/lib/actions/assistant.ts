@@ -45,7 +45,7 @@ export async function assistantInsights(): Promise<Insights> {
 
 export async function askAssistant(history: ChatTurn[]): Promise<AssistantState> {
   const user = await requireUser();
-  if (!aiAvailable()) return { error: "A csevegés még nincs bekapcsolva (hiányzik a GEMINI_API_KEY). A többi fül AI nélkül is működik." };
+  if (!aiAvailable()) return { error: "A csevegés még nincs bekapcsolva (hiányzik a ANTHROPIC_API_KEY). A többi fül AI nélkül is működik." };
 
   const turns = cleanTurns(history);
   if (!turns.length) return { error: "Írj be egy kérdést." };
@@ -66,7 +66,7 @@ export async function askAssistant(history: ChatTurn[]): Promise<AssistantState>
 /** Beérkező iratok digitalizálása: egy vagy több fájl, párhuzamosan; az eredmény strukturált adat. */
 export async function digitizeDocuments(formData: FormData): Promise<DigitizeResponse> {
   const user = await requireUser();
-  if (!aiAvailable()) return { error: "A digitalizáláshoz AI-kulcs kell (GEMINI_API_KEY)." };
+  if (!aiAvailable()) return { error: "A digitalizáláshoz AI-kulcs kell (ANTHROPIC_API_KEY)." };
 
   const files = formData.getAll("files").filter((entry): entry is File => entry instanceof File && entry.size > 0);
   if (!files.length) return { error: "Válassz ki legalább egy fájlt." };

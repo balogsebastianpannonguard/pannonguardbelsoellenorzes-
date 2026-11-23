@@ -78,7 +78,7 @@ export function LawCard({ law, aiOn }: { law: LawRow; aiOn: boolean }) {
             <p className="text-sm leading-relaxed text-white/80">{law.summary}</p>
           ) : (
             <p className="text-sm text-white/55">
-              {aiOn ? "Az összefoglaló nem készült el, a változás szövegrészei alább láthatók." : "Összefoglaló nincs: az AI-hoz GEMINI_API_KEY szükséges. A változás szövegrészei alább láthatók."}
+              {aiOn ? "Az összefoglaló nem készült el, a változás szövegrészei alább láthatók." : "Összefoglaló nincs: az AI-hoz ANTHROPIC_API_KEY szükséges. A változás szövegrészei alább láthatók."}
             </p>
           )}
           <details className="text-sm">

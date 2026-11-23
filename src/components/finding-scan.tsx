@@ -62,7 +62,7 @@ export function FindingScan({ audits, files, aiOn }: { audits: AuditOption[]; fi
 
       {!aiOn && (
         <p className="flex gap-2 text-xs text-amber-200/90">
-          <KeyRound size={14} aria-hidden className="mt-0.5 shrink-0" /> Az AI-s feltáráshoz GEMINI_API_KEY szükséges a szerveren.
+          <KeyRound size={14} aria-hidden className="mt-0.5 shrink-0" /> Az AI-s feltáráshoz ANTHROPIC_API_KEY szükséges a szerveren.
         </p>
       )}
       <div className="grid gap-2">
@@ -76,7 +76,7 @@ export function FindingScan({ audits, files, aiOn }: { audits: AuditOption[]; fi
         </button>
       </div>
       <Feedback error={result.error} message={result.message} />
-      <p className="text-xs text-white/40">Az AI-s feltáráskor a fájl szövege az AI-szolgáltatóhoz (Google Gemini) kerül. A javaslatokat ember hagyja jóvá.</p>
+      <p className="text-xs text-white/40">Az AI-s feltáráskor a fájl szövege az AI-szolgáltatóhoz (Anthropic Claude) kerül. A javaslatokat ember hagyja jóvá.</p>
     </div>
   );
 }

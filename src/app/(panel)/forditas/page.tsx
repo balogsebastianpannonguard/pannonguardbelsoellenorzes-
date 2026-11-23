@@ -7,9 +7,11 @@ import { TranslateDisclaimer } from "@/components/translate-disclaimer";
 import { TranslateForm } from "@/components/translate-form";
 import { Empty, Panel, Skeleton } from "@/components/ui";
 import { aiAvailable } from "@/lib/ai";
+import { deeplAvailable } from "@/lib/deepl";
 import { formatStamp } from "@/lib/dates";
 import { requireUser } from "@/lib/session";
-import { listTranslations } from "@/lib/translations";
+import { listGlossary, listTranslations } from "@/lib/translations";
+import { GlossaryPanel } from "@/components/translate-glossary";
 
 export const metadata: Metadata = { title: "Fordítás" };
 export const maxDuration = 120;
@@ -30,15 +32,16 @@ export default function TranslatePage() {
 
 async function Translate() {
   await requireUser();
-  const history = await listTranslations();
+  const [history, entries] = await Promise.all([listTranslations(), listGlossary()]);
 
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="space-y-6">
         <Panel title="Új fordítás" icon={Languages}>
-          <TranslateForm aiOn={aiAvailable()} />
+          <TranslateForm aiOn={aiAvailable()} deeplOn={deeplAvailable()} />
         </Panel>
         <TranslateDisclaimer />
+        <GlossaryPanel entries={entries} />
       </div>
 
       <Panel title="Előzmények" icon={History}>

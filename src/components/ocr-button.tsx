@@ -15,7 +15,7 @@ export function OcrButton({ fileId, aiOn, again = false }: { fileId: string; aiO
       <button
         type="button"
         disabled={pending || !aiOn}
-        title={aiOn ? undefined : "A szövegfelismeréshez AI-kulcs (GEMINI_API_KEY) kell."}
+        title={aiOn ? undefined : "A szövegfelismeréshez AI-kulcs (ANTHROPIC_API_KEY) kell."}
         onClick={() =>
           start(async () => {
             try {

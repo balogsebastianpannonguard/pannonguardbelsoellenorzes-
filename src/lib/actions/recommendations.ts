@@ -87,7 +87,7 @@ const keywords = (value: string) => new Set(value.toLowerCase().split(/[^\p{L}\p
 /** Vázlat készítése a megállapításból és a hasonló korábbi esetekből; a vázlatot az ellenőr szerkeszti és hagyja jóvá. */
 export async function generateRecommendation(findingId: string): Promise<FormState> {
   const user = await requireUser();
-  if (!aiAvailable()) return { error: "Az AI-vázlathoz GEMINI_API_KEY szükséges a szerveren. Írhatsz javaslatot kézzel is." };
+  if (!aiAvailable()) return { error: "Az AI-vázlathoz ANTHROPIC_API_KEY szükséges a szerveren. Írhatsz javaslatot kézzel is." };
   if (!ObjectId.isValid(findingId)) return { error: "Ismeretlen megállapítás." };
   const collection = await findings();
   const finding = await collection.findOne({ _id: new ObjectId(findingId) });

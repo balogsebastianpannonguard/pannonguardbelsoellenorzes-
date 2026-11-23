@@ -17,7 +17,7 @@ export function DatasetAnalysis({ id }: { id: string }) {
           {pending ? "Elemzés…" : "Elemzés kérése"}
         </button>
         <p className="max-w-xl text-xs text-white/45">
-          Az oszlopprofil és az első 100 sor a Google Gemini szolgáltatóhoz kerül feldolgozásra. Személyes vagy bizalmas adatot tartalmazó táblázatnál ezt vedd figyelembe.
+          Az oszlopprofil és az első 100 sor az AI-szolgáltatóhoz (Anthropic Claude) kerül feldolgozásra. Személyes vagy bizalmas adatot tartalmazó táblázatnál ezt vedd figyelembe.
         </p>
       </form>
       {state.error && (

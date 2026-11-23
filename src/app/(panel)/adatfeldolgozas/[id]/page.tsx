@@ -115,7 +115,7 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
         {aiAvailable() ? (
           <DatasetAnalysis id={String(dataset._id)} />
         ) : (
-          <p className="text-sm text-white/55">Az AI-elemzéshez a szerveren be kell állítani a GEMINI_API_KEY változót. Az oszlopprofil és az ábrák nélküle is működnek.</p>
+          <p className="text-sm text-white/55">Az AI-elemzéshez a szerveren be kell állítani a ANTHROPIC_API_KEY változót. Az oszlopprofil és az ábrák nélküle is működnek.</p>
         )}
       </Panel>
     </>

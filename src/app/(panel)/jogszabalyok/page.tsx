@@ -54,7 +54,7 @@ async function Legal() {
         <CheckAllButton />
         <p className="flex items-center gap-2 text-xs text-white/45">
           <Sparkles size={14} aria-hidden className={aiOn ? "text-mint" : "text-white/30"} />
-          {aiOn ? "Változásnál AI-összefoglaló is készül." : "AI-összefoglaló nincs: ehhez GEMINI_API_KEY szükséges."}
+          {aiOn ? "Változásnál AI-összefoglaló is készül." : "AI-összefoglaló nincs: ehhez ANTHROPIC_API_KEY szükséges."}
         </p>
       </div>
 

@@ -150,7 +150,7 @@ const SCAN_SYSTEM = [
 
 export async function scanFile(fileId: string): Promise<FormState> {
   const user = await requireUser();
-  if (!aiAvailable()) return { error: "Az AI-s feltáráshoz GEMINI_API_KEY szükséges a szerveren." };
+  if (!aiAvailable()) return { error: "Az AI-s feltáráshoz ANTHROPIC_API_KEY szükséges a szerveren." };
   const file = await getAuditFile(fileId);
   if (!file) return { error: "A fájl nem található." };
   if (file.text.trim().length < 20) return { error: "A fájlból nem nyerhető ki elemezhető szöveg." };

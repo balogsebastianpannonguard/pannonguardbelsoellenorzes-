@@ -9,7 +9,7 @@ import type { FormState } from "@/lib/form";
 import { LANGUAGES, TONES } from "@/lib/translations-meta";
 import { useKeepForm, uploadTooBig } from "@/components/use-keep-form";
 
-export function TranslateForm({ aiOn }: { aiOn: boolean }) {
+export function TranslateForm({ aiOn, deeplOn }: { aiOn: boolean; deeplOn: boolean }) {
   const router = useRouter();
   const [state, action, pending] = useActionState<FormState, FormData>(translateDocument, {});
   const { ref: keepRef, onSubmit: keepSubmit, clientError, clearClientError } = useKeepForm(action, state, { check: uploadTooBig });
@@ -22,12 +22,12 @@ export function TranslateForm({ aiOn }: { aiOn: boolean }) {
 
   return (
     <form ref={keepRef} onSubmit={keepSubmit} className="space-y-4">
-      {!aiOn && (
+      {!aiOn && !deeplOn && (
         <div className="flex gap-3 rounded-2xl border border-amber-300/25 bg-amber-300/8 p-4 text-sm text-amber-100">
           <KeyRound size={18} aria-hidden className="mt-0.5 shrink-0 text-amber-300" />
           <p>
-            A fordítás AI-t használ, de a szerveren nincs beállítva a <strong>GEMINI_API_KEY</strong>. Add meg a kulcsot a
-            környezeti változók között, és utána a küldés működni fog.
+            A fordításhoz a szerveren <strong>DEEPL_API_KEY</strong> (fordítás) és <strong>ANTHROPIC_API_KEY</strong> (ellenőrzés,
+            csevegés) szükséges. Add meg a kulcsokat a környezeti változók között, és utána a küldés működni fog.
           </p>
         </div>
       )}
@@ -93,11 +93,15 @@ export function TranslateForm({ aiOn }: { aiOn: boolean }) {
         </Label>
       </div>
 
-      <p className="text-xs text-white/45">A szöveg a fordításhoz az AI-szolgáltatóhoz (Google Gemini) kerül feldolgozásra.</p>
+      <p className="text-xs text-white/45">
+        {deeplOn
+          ? "A szöveget a DeepL fordítja, a szakszavak ellenőrzéséhez pedig az Anthropic Claude-hoz kerül."
+          : "A szöveg a fordításhoz az AI-szolgáltatóhoz (Anthropic Claude) kerül feldolgozásra."}
+      </p>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Feedback error={clientError ?? state.error} />
-        <button type="submit" disabled={pending || !aiOn} className={buttonClass("primary")}>
+        <button type="submit" disabled={pending || !(aiOn || deeplOn)} className={buttonClass("primary")}>
           {pending ? <LoaderCircle size={17} aria-hidden className="animate-spin" /> : fileName ? <FileUp size={17} aria-hidden /> : <Languages size={17} aria-hidden />}
           {pending ? "Fordítás…" : "Fordítás"}
         </button>
