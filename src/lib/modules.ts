@@ -1,6 +1,7 @@
 import {
   ChartColumn,
   ClipboardList,
+  Files,
   FolderKanban,
   Languages,
   Lightbulb,
@@ -118,6 +119,20 @@ export const MODULES: Module[] = [
       "Új vagy módosult rendelkezés esetén értesítés",
       "A változáshoz kapcsolódó belső szabályzatok és teendők megjelölése",
       "Hatálybalépési határidők a naptárban",
+    ],
+  },
+  {
+    slug: "dokumentumok",
+    number: "08",
+    title: "Feltöltött dokumentumok",
+    label: "Dokumentumok",
+    icon: Files,
+    summary: "A feltöltött iratok egy helyen: előnézet, kiolvasott szöveg, keresés és letöltés.",
+    goals: [
+      "PDF, Word, szöveges fájl és fénykép feltöltése, akár egyszerre több is",
+      "Előnézet a böngészőben, letöltés nélkül",
+      "A dokumentum szövege kiolvasva és másolható – szkennelt iratból is",
+      "Keresés a dokumentumok nevében és szövegében",
     ],
   },
 ];
